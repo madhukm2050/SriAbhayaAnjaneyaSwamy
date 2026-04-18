@@ -18,31 +18,31 @@ const GOOGLE_SHEET_URL: string =
 // --- Translations ---
 const translations: any = {
   te: {
-    title: "SRI ABHAYA ANJANEYA SWAMY",
-    location: "S. SADLAPALLI",
-    searchPlaceholder: "మొబైల్ సంఖ్యతో వెతకండి...",
+    title: "శ్రీ అభయ ఆంజనేయ స్వామి",
+    location: "ఎస్. సడ్లపల్లి",
+    searchPlaceholder: "మొబైల్ నంబర్‌తో వెతకండి...",
     searchResultTitle: "మీ రాబోయే బుకింగ్‌లు:",
     noBookingsFound: "డేటా ఏదీ కనిపించలేదు.",
     selectDate: "పూజ తేదీని ఎంచుకోండి",
-    devoteeDetails: "Devotee Details",
-    devoteeName: "Devotee Name *",
-    familyName: "Family Name *",
-    fatherName: "Father Name",
-    mobile: "Mobile Number *",
-    gothram: "Gothram",
-    occasion: "Occasion",
-    confirm: "Confirm Nitya Pooja",
-    saving: "Saving...",
-    success: "Booking Confirmed!",
+    devoteeDetails: "భక్తుల వివరాలు",
+    devoteeName: "భక్తుని పేరు *",
+    familyName: "ఇంటి పేరు *",
+    fatherName: "తండ్రి పేరు",
+    mobile: "మొబైల్ నంబర్ *",
+    gothram: "గోత్రం",
+    occasion: "సందర్భం",
+    confirm: "నిత్య పూజను నిర్ధారించండి",
+    saving: "సేవ్ అవుతోంది...",
+    success: "బుకింగ్ నిర్ధారించబడింది!",
     blessings:
       "శ్రీ అభయ ఆంజనేయ స్వామి ఆశీస్సులు మీ కుటుంబానికి ఎల్లప్పుడూ ఉండాలి, ",
-    back: "మరో బుకింగ్ చేయండి",
+    back: "మరో పూజను బుక్ చేయండి",
     noBookings: "ఈ తేదీకి ఇంకా బుకింగ్‌లు లేవు.",
     bookedDevotees: "బుక్ చేసుకున్న భక్తులు",
-    poojaLabel: "POOJA",
-    dateLabel: "DATE",
-    timeLabel: "TIME",
-    mobileAlert: "దయచేసి 10 అంకెల మొబైల్ సంఖ్యను నమోదు చేయండి.",
+    poojaLabel: "పూజ",
+    dateLabel: "తేదీ",
+    timeLabel: "సమయం",
+    mobileAlert: "దయచేసి సరైన 10 అంకెల మొబైల్ నంబర్‌ను నమోదు చేయండి.",
     days: ["ఆది", "సోమ", "మంగళ", "బుధ", "గురు", "శుక్ర", "శని"],
     months: [
       "జనవరి",
@@ -58,6 +58,18 @@ const translations: any = {
       "నవంబర్",
       "డిసెంబర్",
     ],
+    // --- New Fully Translated Fields ---
+    phDevoteeName: "భక్తుని పేరు నమోదు చేయండి",
+    phFamilyName: "ఇంటి పేరు నమోదు చేయండి",
+    phFatherName: "తండ్రి పేరు నమోదు చేయండి",
+    phMobile: "10-అంకెల మొబైల్ నంబర్ నమోదు చేయండి",
+    phGothram: "ఉదా. కశ్యప",
+    phOccasion: "ఉదా. పుట్టినరోజు, పెళ్లిరోజు",
+    nityaPooja: "నిత్య పూజ",
+    timeAm: "ఉదయం 08:00",
+    familySuffix: "కుటుంబం",
+    bookPoojaBtn: "నిత్య పూజను బుక్ చేయండి",
+    langToggle: "ENGLISH",
   },
   en: {
     title: "SRI ABHAYA ANJANEYA SWAMY",
@@ -100,6 +112,18 @@ const translations: any = {
       "November",
       "December",
     ],
+    // --- New Fields ---
+    phDevoteeName: "Enter devotee name",
+    phFamilyName: "Enter family name",
+    phFatherName: "Enter father's name",
+    phMobile: "Enter 10-digit mobile number",
+    phGothram: "e.g. Kashyapa",
+    phOccasion: "e.g. Birthday, Anniversary",
+    nityaPooja: "Nitya Pooja",
+    timeAm: "08:00 AM",
+    familySuffix: "Family",
+    bookPoojaBtn: "Book Nitya Pooja",
+    langToggle: "తెలుగు",
   },
 };
 
@@ -323,7 +347,7 @@ export default function App() {
             onClick={() => setLang(lang === "te" ? "en" : "te")}
             className="bg-white/10 px-3 py-1 rounded text-xs border border-white/20 uppercase font-bold"
           >
-            {lang === "te" ? "English" : "తెలుగు"}
+            {t.langToggle}
           </button>
         </div>
       </header>
@@ -398,8 +422,8 @@ export default function App() {
                   {formatDateLabel(selectedDate)}
                 </div>
                 <div className="bg-orange-50 px-4 py-2 rounded-full border border-orange-100 flex items-center gap-2 text-sm font-bold text-orange-800">
-                  <Clock size={16} className="text-orange-400" /> 08:00 AM
-                  (Nitya Pooja)
+                  <Clock size={16} className="text-orange-400" /> {t.timeAm} (
+                  {t.nityaPooja})
                 </div>
               </div>
             </div>
@@ -413,7 +437,7 @@ export default function App() {
                   <input
                     required
                     className="w-full p-4 bg-gray-50 border border-gray-100 rounded-lg outline-none focus:bg-white focus:border-orange-300"
-                    placeholder="Enter devotee name"
+                    placeholder={t.phDevoteeName}
                     onChange={(e) =>
                       setFormData({ ...formData, devoteeName: e.target.value })
                     }
@@ -426,7 +450,7 @@ export default function App() {
                   <input
                     required
                     className="w-full p-4 bg-gray-50 border border-gray-100 rounded-lg outline-none focus:bg-white focus:border-orange-300"
-                    placeholder="Enter family name"
+                    placeholder={t.phFamilyName}
                     onChange={(e) =>
                       setFormData({ ...formData, familyName: e.target.value })
                     }
@@ -438,7 +462,7 @@ export default function App() {
                   </label>
                   <input
                     className="w-full p-4 bg-gray-50 border border-gray-100 rounded-lg outline-none focus:bg-white focus:border-orange-300"
-                    placeholder="Enter father's name"
+                    placeholder={t.phFatherName}
                     onChange={(e) =>
                       setFormData({ ...formData, fatherName: e.target.value })
                     }
@@ -454,7 +478,7 @@ export default function App() {
                     maxLength={10}
                     pattern="[0-9]{10}"
                     className="w-full p-4 bg-gray-50 border border-gray-100 rounded-lg outline-none focus:bg-white focus:border-orange-300"
-                    placeholder="Enter 10-digit mobile number"
+                    placeholder={t.phMobile}
                     onChange={(e) =>
                       setFormData({
                         ...formData,
@@ -469,7 +493,7 @@ export default function App() {
                   </label>
                   <input
                     className="w-full p-4 bg-gray-50 border border-gray-100 rounded-lg outline-none focus:bg-white focus:border-orange-300"
-                    placeholder="e.g. Kashyapa"
+                    placeholder={t.phGothram}
                     onChange={(e) =>
                       setFormData({ ...formData, gothram: e.target.value })
                     }
@@ -481,7 +505,7 @@ export default function App() {
                   </label>
                   <input
                     className="w-full p-4 bg-gray-50 border border-gray-100 rounded-lg outline-none focus:bg-white focus:border-orange-300"
-                    placeholder="e.g. Birthday, Anniversary"
+                    placeholder={t.phOccasion}
                     onChange={(e) =>
                       setFormData({ ...formData, occasion: e.target.value })
                     }
@@ -517,7 +541,7 @@ export default function App() {
                 <span className="text-[10px] font-bold text-orange-800 uppercase tracking-wider">
                   {t.poojaLabel}
                 </span>
-                <span className="font-bold text-red-900">Nitya Pooja</span>
+                <span className="font-bold text-red-900">{t.nityaPooja}</span>
               </div>
               <div className="flex justify-between items-center py-5 border-b border-orange-100">
                 <span className="text-[10px] font-bold text-orange-800 uppercase tracking-wider">
@@ -531,7 +555,7 @@ export default function App() {
                 <span className="text-[10px] font-bold text-orange-800 uppercase tracking-wider">
                   {t.timeLabel}
                 </span>
-                <span className="font-bold text-gray-900">08:00 AM</span>
+                <span className="font-bold text-gray-900">{t.timeAm}</span>
               </div>
             </div>
 
@@ -573,7 +597,7 @@ export default function App() {
                         {b.devoteeName}
                       </span>
                       <span className="text-xs text-orange-700 font-medium italic">
-                        {b.familyName} Family
+                        {b.familyName} {t.familySuffix}
                       </span>
                     </div>
                   ))}
@@ -593,8 +617,8 @@ export default function App() {
                   }}
                   className="w-full py-4 bg-red-700 text-white rounded-xl font-bold flex items-center justify-center gap-2 shadow-lg"
                 >
-                  <Flame size={20} className="text-yellow-300" /> Book Nitya
-                  Pooja
+                  <Flame size={20} className="text-yellow-300" />{" "}
+                  {t.bookPoojaBtn}
                 </button>
               </div>
             </div>
