@@ -1,217 +1,296 @@
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect } from "react";
 import {
   Calendar as CalendarIcon,
   Clock,
   User,
-  Phone,
   CheckCircle,
   ArrowLeft,
-  Info,
   Bell,
   Flame,
   X,
+  Globe,
+  Search,
 } from "lucide-react";
 
-// --- Configuration & Mock Data ---
-const MONTH_NAMES = [
-  "January",
-  "February",
-  "March",
-  "April",
-  "May",
-  "June",
-  "July",
-  "August",
-  "September",
-  "October",
-  "November",
-  "December",
-];
-const DAYS_OF_WEEK = ["Su", "Mo", "Tu", "We", "Th", "Fr", "Sa"];
+// Replace this with your actual Web App URL from Google Apps Script
+const GOOGLE_SHEET_URL: string =
+  "https://script.google.com/macros/s/AKfycbwTKGgh_07E2mkg58lztoPb3ibH4fgAq5Mmmf2ZuVDfLN1yxlAXPFjaZ0PgXGNha2vbhA/exec";
+
+// --- Translations ---
+const translations: any = {
+  te: {
+    title: "SRI ABHAYA ANJANEYA SWAMY",
+    location: "S. SADLAPALLI",
+    searchPlaceholder: "మొబైల్ సంఖ్యతో వెతకండి...",
+    searchResultTitle: "మీ రాబోయే బుకింగ్‌లు:",
+    noBookingsFound: "డేటా ఏదీ కనిపించలేదు.",
+    selectDate: "పూజ తేదీని ఎంచుకోండి",
+    devoteeDetails: "Devotee Details",
+    devoteeName: "Devotee Name *",
+    familyName: "Family Name *",
+    fatherName: "Father Name",
+    mobile: "Mobile Number *",
+    gothram: "Gothram",
+    occasion: "Occasion",
+    confirm: "Confirm Nitya Pooja",
+    saving: "Saving...",
+    success: "Booking Confirmed!",
+    blessings:
+      "శ్రీ అభయ ఆంజనేయ స్వామి ఆశీస్సులు మీ కుటుంబానికి ఎల్లప్పుడూ ఉండాలి, ",
+    back: "మరో బుకింగ్ చేయండి",
+    noBookings: "ఈ తేదీకి ఇంకా బుకింగ్‌లు లేవు.",
+    bookedDevotees: "బుక్ చేసుకున్న భక్తులు",
+    poojaLabel: "POOJA",
+    dateLabel: "DATE",
+    timeLabel: "TIME",
+    mobileAlert: "దయచేసి 10 అంకెల మొబైల్ సంఖ్యను నమోదు చేయండి.",
+    days: ["ఆది", "సోమ", "మంగళ", "బుధ", "గురు", "శుక్ర", "శని"],
+    months: [
+      "జనవరి",
+      "ఫిబ్రవరి",
+      "మార్చి",
+      "ఏప్రిల్",
+      "మే",
+      "జూన్",
+      "జూలై",
+      "ఆగస్టు",
+      "సెప్టెంబర్",
+      "అక్టోబర్",
+      "นవంబర్",
+      "డిసెంబర్",
+    ],
+  },
+  en: {
+    title: "SRI ABHAYA ANJANEYA SWAMY",
+    location: "S. SADLAPALLI",
+    searchPlaceholder: "Search by mobile number...",
+    searchResultTitle: "Your Upcoming Bookings:",
+    noBookingsFound: "No records found.",
+    selectDate: "Select Pooja Date",
+    devoteeDetails: "Devotee Details",
+    devoteeName: "Devotee Name *",
+    familyName: "Family Name *",
+    fatherName: "Father Name",
+    mobile: "Mobile Number *",
+    gothram: "Gothram",
+    occasion: "Occasion",
+    confirm: "Confirm Nitya Pooja",
+    saving: "Saving...",
+    success: "Booking Confirmed!",
+    blessings:
+      "May Sri Abhaya Anjaneya Swamy's blessings be upon you and your family, ",
+    back: "Book Another Pooja",
+    noBookings: "No bookings for this date yet.",
+    bookedDevotees: "Nitya Pooja Devotees",
+    poojaLabel: "POOJA",
+    dateLabel: "DATE",
+    timeLabel: "TIME",
+    mobileAlert: "Please enter a valid 10-digit mobile number.",
+    days: ["Su", "Mo", "Tu", "We", "Th", "Fr", "Sa"],
+    months: [
+      "January",
+      "February",
+      "March",
+      "April",
+      "May",
+      "June",
+      "July",
+      "August",
+      "September",
+      "October",
+      "November",
+      "December",
+    ],
+  },
+};
 
 export default function App() {
-  // --- State ---
-  const [selectedDate, setSelectedDate] = useState(null); // 'YYYY-MM-DD'
-  const [view, setView] = useState("calendar"); // 'calendar', 'form', 'success'
-  const [isDialogOpen, setIsDialogOpen] = useState(false); // Controls the date details dialog
+  const [lang, setLang] = useState<"te" | "en">("te");
+  const t = translations[lang];
 
-  // In-memory database of bookings to prevent double booking.
-  // Format: { "YYYY-MM-DD": [{ devoteeName: "Name", familyName: "Family" }] }
-  const [bookings, setBookings] = useState({});
+  const [selectedDate, setSelectedDate] = useState<string | null>(null);
+  const [view, setView] = useState<string>("calendar");
+  const [isDialogOpen, setIsDialogOpen] = useState<boolean>(false);
+  const [rawBookings, setRawBookings] = useState<any[]>([]);
+  const [bookingsMap, setBookingsMap] = useState<any>({});
+  const [searchQuery, setSearchQuery] = useState("");
+  const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
 
-  // Form State
   const [formData, setFormData] = useState({
     devoteeName: "",
     familyName: "",
     fatherName: "",
-    occasion: "",
-    gothram: "",
-    recurrence: "One Time",
     mobile: "",
-    instructions: "",
+    gothram: "",
+    occasion: "",
   });
 
-  // --- Utilities ---
-  const getTodayStr = () => {
-    const today = new Date();
-    return `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(
-      2,
-      "0"
-    )}-${String(today.getDate()).padStart(2, "0")}`;
-  };
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
 
-  const formatDate = (dateStr) => {
+  useEffect(() => {
+    fetch(GOOGLE_SHEET_URL)
+      .then((res) => res.json())
+      .then((data) => {
+        setRawBookings(data);
+        const grouped: any = {};
+        data.forEach((row: any) => {
+          if (!row.Date) return;
+          const monthDay = row.Date.split("-").slice(1).join("-");
+          if (!grouped[monthDay]) grouped[monthDay] = [];
+          grouped[monthDay].push({
+            devoteeName: row.DevoteeName,
+            familyName: row.FamilyName,
+          });
+        });
+        setBookingsMap(grouped);
+      })
+      .catch((err) => console.error(err));
+  }, []);
+
+  const formatDateLabel = (dateStr: string | null) => {
     if (!dateStr) return "";
-    const [year, month, day] = dateStr.split("-");
-    const dateObj = new Date(year, parseInt(month) - 1, day);
-    return `${dateObj.getDate()} ${MONTH_NAMES[dateObj.getMonth()]}`;
+    const [y, m, d] = dateStr.split("-");
+    const monthIndex = parseInt(m) - 1;
+    return lang === "te"
+      ? `${parseInt(d)} ${translations.te.months[monthIndex]}`
+      : `${parseInt(d)} ${translations.en.months[monthIndex]}`;
   };
 
-  // Generate the 12 months from January to December
-  const generate12Months = () => {
+  const generateRollingYear = () => {
     const months = [];
-    const currentYear = new Date().getFullYear();
-
-    for (let i = 0; i < 12; i++) {
-      months.push({ year: currentYear, month: i });
+    let curMonth = today.getMonth();
+    let curYear = today.getFullYear();
+    for (let i = 0; i < 13; i++) {
+      months.push({ year: curYear, month: curMonth });
+      curMonth++;
+      if (curMonth > 11) {
+        curMonth = 0;
+        curYear++;
+      }
     }
     return months;
   };
 
-  const twelveMonths = generate12Months();
+  const filteredSearch = rawBookings.filter(
+    (b) =>
+      searchQuery.length === 10 &&
+      b.Mobile &&
+      b.Mobile.toString().includes(searchQuery)
+  );
 
-  // --- Handlers ---
-  const handleDateClick = (dateStr) => {
-    setSelectedDate(dateStr);
-    setIsDialogOpen(true);
-  };
-
-  const handleInputChange = (e) => {
-    const { name, value } = e.target;
-    setFormData((prev) => ({ ...prev, [name]: value }));
-  };
-
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (formData.mobile.length !== 10) {
+      alert(t.mobileAlert);
+      return;
+    }
+    if (!selectedDate) return;
+    setIsSubmitting(true);
 
-    // Save to our "database"
-    setBookings((prev) => {
-      const newBookings = { ...prev };
-      const [yearStr, monthStr, dayStr] = selectedDate.split("-");
-      const startYear = parseInt(yearStr);
+    const bookingData = {
+      Date: selectedDate,
+      DevoteeName: formData.devoteeName,
+      FatherName: formData.fatherName || "N/A",
+      FamilyName: formData.familyName,
+      Mobile: formData.mobile,
+      Gothram: formData.gothram || "N/A",
+      Occasion: formData.occasion || "N/A",
+    };
 
-      const newBookingRecord = {
-        id: Date.now(),
-        devoteeName: formData.devoteeName,
-        familyName: formData.familyName,
-      };
-
-      if (formData.recurrence === "Yearly") {
-        // Book for the selected year and the next 10 upcoming years
-        for (let i = 0; i <= 10; i++) {
-          const futureDate = `${startYear + i}-${monthStr}-${dayStr}`;
-          const dayBookings = newBookings[futureDate] || [];
-          newBookings[futureDate] = [...dayBookings, newBookingRecord];
-        }
-      } else {
-        // One Time booking
-        const dayBookings = newBookings[selectedDate] || [];
-        newBookings[selectedDate] = [...dayBookings, newBookingRecord];
-      }
-
-      return newBookings;
-    });
-
-    setView("success");
+    try {
+      await fetch(GOOGLE_SHEET_URL, {
+        method: "POST",
+        mode: "no-cors",
+        body: JSON.stringify(bookingData),
+      });
+      const mDay = selectedDate.split("-").slice(1).join("-");
+      setBookingsMap((prev: any) => ({
+        ...prev,
+        [mDay]: [
+          ...(prev[mDay] || []),
+          {
+            devoteeName: formData.devoteeName,
+            familyName: formData.familyName,
+          },
+        ],
+      }));
+      setView("success");
+    } catch (error) {
+      alert("Error!");
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
-  const resetBooking = () => {
-    setSelectedDate(null);
-    setFormData({
-      devoteeName: "",
-      familyName: "",
-      fatherName: "",
-      occasion: "",
-      gothram: "",
-      recurrence: "One Time",
-      mobile: "",
-      instructions: "",
-    });
-    setView("calendar");
-  };
-
-  // --- Components ---
-
-  const MonthGrid = ({ year, month }) => {
-    const daysInMonth = new Date(year, month + 1, 0).getDate();
+  const MonthGrid = ({ year, month }: { year: number; month: number }) => {
+    const days = Array.from(
+      { length: new Date(year, month + 1, 0).getDate() },
+      (_, i) => i + 1
+    );
     const firstDay = new Date(year, month, 1).getDay();
-    const todayStr = getTodayStr();
-
     const blanks = Array.from({ length: firstDay }, (_, i) => i);
-    const days = Array.from({ length: daysInMonth }, (_, i) => i + 1);
 
     return (
-      <div className="mb-8 bg-white/90 p-4 sm:p-6 rounded-2xl shadow-lg border-2 border-orange-100 relative overflow-hidden backdrop-blur-sm">
-        <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-orange-400 via-red-500 to-orange-400"></div>
-        <h3 className="text-2xl font-serif font-bold text-[#8B0000] mb-4 text-center flex items-center justify-center gap-2">
-          <span className="text-orange-400 text-sm">❖</span>
-          {MONTH_NAMES[month]}
-          <span className="text-orange-400 text-sm">❖</span>
+      <div className="mb-8 bg-white/90 p-6 rounded-2xl shadow-sm border border-orange-100">
+        <h3 className="text-xl font-bold text-[#8B0000] mb-4 text-center">
+          {lang === "te"
+            ? translations.te.months[month]
+            : translations.en.months[month]}{" "}
+          {year}
         </h3>
-        <div className="grid grid-cols-7 gap-1 sm:gap-2 text-center mb-2">
-          {DAYS_OF_WEEK.map((day) => (
-            <div
-              key={day}
-              className="text-xs font-bold text-orange-800 uppercase tracking-wider"
-            >
-              {day}
+        <div className="grid grid-cols-7 gap-1 text-center mb-2">
+          {t.days.map((d: string) => (
+            <div key={d} className="text-[10px] font-bold text-orange-800">
+              {d}
             </div>
           ))}
         </div>
-        <div className="grid grid-cols-7 gap-1 sm:gap-2">
+        <div className="grid grid-cols-7 gap-1">
           {blanks.map((b) => (
-            <div key={`blank-${b}`} className="h-10 sm:h-12 rounded-lg"></div>
+            <div key={`b-${b}`}></div>
           ))}
           {days.map((day) => {
             const dateStr = `${year}-${String(month + 1).padStart(
               2,
               "0"
             )}-${String(day).padStart(2, "0")}`;
-            const isToday = dateStr === todayStr;
-            const isSelected = selectedDate === dateStr;
+            const mDay = `${String(month + 1).padStart(2, "0")}-${String(
+              day
+            ).padStart(2, "0")}`;
+            const cellDate = new Date(year, month, day);
+            cellDate.setHours(0, 0, 0, 0);
+            const oneYearOut = new Date(today);
+            oneYearOut.setFullYear(today.getFullYear() + 1);
 
-            // Check if there are any bookings on this date to show a visual indicator
-            const dayBookings = bookings[dateStr] || [];
-            const hasBooking = dayBookings.length > 0;
+            const isPast = cellDate < today;
+            const isTooFar = cellDate > oneYearOut;
+            const hasBooking = (bookingsMap[mDay] || []).length > 0;
+            const isSelected = selectedDate === dateStr;
 
             return (
               <button
                 key={dateStr}
-                onClick={() => handleDateClick(dateStr)}
-                className={`
-                  relative h-10 sm:h-12 rounded-lg sm:rounded-xl flex items-center justify-center text-sm sm:text-base font-bold transition-all duration-300
+                disabled={isPast || isTooFar}
+                onClick={() => {
+                  setSelectedDate(dateStr);
+                  setIsDialogOpen(true);
+                }}
+                className={`h-10 rounded-full text-sm font-bold transition-all
+                  ${isSelected ? "bg-red-600 text-white" : "text-gray-800"}
                   ${
-                    !isSelected
-                      ? "text-gray-800 hover:bg-orange-100 hover:text-red-700 hover:shadow-inner active:scale-95 cursor-pointer border border-transparent hover:border-orange-200"
-                      : ""
+                    isPast || isTooFar
+                      ? "opacity-20 cursor-not-allowed"
+                      : "hover:bg-orange-50"
                   }
                   ${
-                    isSelected
-                      ? "bg-gradient-to-br from-orange-500 to-red-600 text-white shadow-md shadow-red-500/40 border border-red-700"
-                      : "bg-orange-50/50"
+                    hasBooking && !isPast && !isTooFar
+                      ? "border-2 border-green-500"
+                      : ""
                   }
                 `}
               >
                 {day}
-                {isToday && !isSelected && (
-                  <span className="absolute bottom-1 w-1 h-1 bg-red-600 rounded-full"></span>
-                )}
-                {hasBooking && !isSelected && (
-                  <span
-                    className="absolute top-1 right-1 w-1.5 h-1.5 bg-green-500 rounded-full border border-white"
-                    title="Booking exists on this date"
-                  ></span>
-                )}
               </button>
             );
           })}
@@ -221,360 +300,302 @@ export default function App() {
   };
 
   return (
-    <div className="min-h-screen bg-[#FFF8E7] font-sans selection:bg-orange-300 selection:text-red-900 pb-12 relative">
-      {/* Decorative background pattern (subtle) */}
-      <div
-        className="fixed inset-0 pointer-events-none opacity-[0.03]"
-        style={{
-          backgroundImage:
-            "url(\"data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%238B0000' fill-opacity='1'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E\")",
-        }}
-      ></div>
-
-      {/* Header */}
-      <header className="bg-gradient-to-r from-[#8B0000] via-[#CC3300] to-[#8B0000] text-white sticky top-0 z-50 shadow-xl border-b-4 border-yellow-500">
-        <div className="max-w-3xl mx-auto px-4 h-20 flex items-center justify-center relative">
-          {view !== "calendar" && view !== "success" && (
-            <button
-              onClick={() => setView("calendar")}
-              className="absolute left-4 p-2 hover:bg-white/20 rounded-full transition-colors backdrop-blur-sm"
-            >
-              <ArrowLeft className="w-6 h-6 text-yellow-100" />
-            </button>
-          )}
-          <div className="flex flex-col items-center justify-center pt-1">
-            <span className="text-yellow-300 text-xs sm:text-sm mb-0.5 font-serif flex items-center gap-2">
-              <Bell className="w-3 h-3 sm:w-4 sm:h-4" /> ॐ{" "}
-              <Bell className="w-3 h-3 sm:w-4 sm:h-4" />
-            </span>
-            <h1 className="text-xl sm:text-2xl font-serif font-extrabold tracking-wider text-transparent bg-clip-text bg-gradient-to-b from-yellow-100 to-yellow-400 drop-shadow-sm uppercase text-center">
-              Sri Abhaya Anjaneya Swamy
+    <div className="min-h-screen bg-[#FFF8E7] pb-12 font-sans selection:bg-orange-200">
+      <header className="bg-[#8B0000] text-white sticky top-0 z-50 border-b-4 border-yellow-500 shadow-xl">
+        <div className="max-w-4xl mx-auto px-4 h-20 flex items-center justify-between">
+          <div className="w-10">
+            {view !== "calendar" && (
+              <button onClick={() => setView("calendar")}>
+                <ArrowLeft />
+              </button>
+            )}
+          </div>
+          <div className="text-center flex flex-col items-center">
+            <div className="flex gap-2 text-yellow-400 text-[10px] mb-1">
+              <Bell size={10} />
+              <span className="font-serif">ॐ</span>
+              <Bell size={10} />
+            </div>
+            <h1 className="text-lg font-serif font-extrabold tracking-widest">
+              {t.title}
             </h1>
           </div>
+          <button
+            onClick={() => setLang(lang === "te" ? "en" : "te")}
+            className="bg-white/10 px-3 py-1 rounded text-xs border border-white/20 uppercase font-bold"
+          >
+            {lang === "te" ? "English" : "తెలుగు"}
+          </button>
         </div>
       </header>
 
-      <main className="max-w-3xl mx-auto px-4 pt-8 sm:pt-10 relative z-10">
-        {/* VIEW: CALENDAR */}
+      <main className="max-w-4xl mx-auto px-4 pt-8">
         {view === "calendar" && (
-          <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
-            <div className="text-center mb-10">
-              <div className="inline-flex items-center justify-center gap-3 px-6 py-2 bg-orange-100/80 rounded-full border border-orange-200 mb-2 shadow-sm">
-                <Flame className="text-orange-600 w-5 h-5 animate-pulse" />
-                <h2 className="text-xl sm:text-2xl font-serif font-bold text-[#8B0000]">
-                  Select Date For Nitya Pooja
-                </h2>
-                <Flame className="text-orange-600 w-5 h-5 animate-pulse" />
-              </div>
+          <div>
+            <div className="flex bg-white border border-orange-200 rounded-xl px-4 py-3 mb-6 shadow-sm">
+              <Search className="text-orange-300 mr-2" />
+              <input
+                type="tel"
+                maxLength={10}
+                placeholder={t.searchPlaceholder}
+                className="w-full outline-none text-sm"
+                value={searchQuery}
+                onChange={(e) =>
+                  setSearchQuery(e.target.value.replace(/[^0-9]/g, ""))
+                }
+              />
             </div>
 
-            {/* Scrollable 12 Month View */}
-            <div className="space-y-8">
-              {twelveMonths.map((m, index) => (
-                <MonthGrid key={index} year={m.year} month={m.month} />
-              ))}
-            </div>
-          </div>
-        )}
-
-        {/* VIEW: BOOKING FORM */}
-        {view === "form" && (
-          <div className="animate-in fade-in slide-in-from-right-4 duration-300">
-            <div className="bg-white/95 backdrop-blur-sm rounded-2xl shadow-xl border-2 border-orange-100 overflow-hidden">
-              <div className="bg-gradient-to-br from-orange-50 to-red-50 p-6 border-b-2 border-orange-200 relative overflow-hidden">
-                <div className="absolute -right-4 -top-4 opacity-10">
-                  <svg
-                    width="100"
-                    height="100"
-                    viewBox="0 0 24 24"
-                    fill="currentColor"
-                    xmlns="http://www.w3.org/2000/svg"
-                  >
-                    <path d="M12 2L15.09 8.26L22 9.27L17 14.14L18.18 21.02L12 17.77L5.82 21.02L7 14.14L2 9.27L8.91 8.26L12 2Z" />
-                  </svg>
-                </div>
-                <h2 className="text-2xl font-serif font-bold text-[#8B0000] mb-2 relative z-10">
-                  Devotee Details
-                </h2>
-                <div className="flex flex-wrap gap-x-5 gap-y-2 text-sm text-orange-900 font-semibold relative z-10">
-                  <span className="flex items-center gap-1.5 bg-white/60 px-3 py-1 rounded-full border border-orange-200">
-                    <CalendarIcon className="w-4 h-4 text-orange-600" />{" "}
-                    {formatDate(selectedDate)}
-                  </span>
-                  <span className="flex items-center gap-1.5 bg-white/60 px-3 py-1 rounded-full border border-orange-200">
-                    <Clock className="w-4 h-4 text-orange-600" /> 07:00 AM
-                    (Nitya Pooja)
-                  </span>
-                </div>
-              </div>
-
-              <form onSubmit={handleSubmit} className="p-6 sm:p-8 space-y-6">
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
-                  <div>
-                    <label className="block text-sm font-semibold text-gray-700 mb-1">
-                      Devotee Name *
-                    </label>
-                    <input
-                      required
-                      type="text"
-                      name="devoteeName"
-                      value={formData.devoteeName}
-                      onChange={handleInputChange}
-                      className="block w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-orange-500 focus:border-orange-500 outline-none transition-all"
-                      placeholder="Enter devotee name"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-semibold text-gray-700 mb-1">
-                      Family Name *
-                    </label>
-                    <input
-                      required
-                      type="text"
-                      name="familyName"
-                      value={formData.familyName}
-                      onChange={handleInputChange}
-                      className="block w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-orange-500 focus:border-orange-500 outline-none transition-all"
-                      placeholder="Enter family name"
-                    />
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
-                  <div>
-                    <label className="block text-sm font-semibold text-gray-700 mb-1">
-                      Father Name
-                    </label>
-                    <input
-                      type="text"
-                      name="fatherName"
-                      value={formData.fatherName}
-                      onChange={handleInputChange}
-                      className="block w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-orange-500 focus:border-orange-500 outline-none transition-all"
-                      placeholder="Enter father's name"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-semibold text-gray-700 mb-1">
-                      Mobile Number *
-                    </label>
-                    <input
-                      required
-                      type="tel"
-                      name="mobile"
-                      value={formData.mobile}
-                      onChange={handleInputChange}
-                      className="block w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-orange-500 focus:border-orange-500 outline-none transition-all"
-                      placeholder="Enter mobile number"
-                    />
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
-                  <div>
-                    <label className="block text-sm font-semibold text-gray-700 mb-1">
-                      Gothram
-                    </label>
-                    <input
-                      type="text"
-                      name="gothram"
-                      value={formData.gothram}
-                      onChange={handleInputChange}
-                      className="block w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-orange-500 focus:border-orange-500 outline-none transition-all"
-                      placeholder="e.g. Kashyapa"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-semibold text-gray-700 mb-1">
-                      Occasion
-                    </label>
-                    <input
-                      type="text"
-                      name="occasion"
-                      value={formData.occasion}
-                      onChange={handleInputChange}
-                      className="block w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-orange-500 focus:border-orange-500 outline-none transition-all"
-                      placeholder="e.g. Birthday, Anniversary"
-                    />
-                  </div>
-                </div>
-
-                <div>
-                  <label className="block text-sm font-semibold text-gray-700 mb-1">
-                    Recurrence *
-                  </label>
-                  <select
-                    required
-                    name="recurrence"
-                    value={formData.recurrence}
-                    onChange={handleInputChange}
-                    className="block w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-orange-500 focus:border-orange-500 outline-none transition-all bg-white"
-                  >
-                    <option value="One Time">One Time</option>
-                    <option value="Yearly">Yearly (All Upcoming Years)</option>
-                  </select>
-                </div>
-
-                <div>
-                  <label className="block text-sm font-semibold text-gray-700 mb-1">
-                    Additional Instructions or request
-                  </label>
-                  <textarea
-                    name="instructions"
-                    value={formData.instructions}
-                    onChange={handleInputChange}
-                    rows="3"
-                    className="block w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-orange-500 focus:border-orange-500 outline-none transition-all resize-none"
-                    placeholder="Any specific instructions for the pooja..."
-                  ></textarea>
-                </div>
-
-                <div className="pt-6 border-t border-gray-100">
-                  <button
-                    type="submit"
-                    className="w-full flex justify-center items-center py-4 px-4 border border-transparent rounded-xl shadow-lg shadow-red-900/20 text-lg font-bold text-white bg-gradient-to-r from-[#8B0000] to-red-600 hover:from-red-700 hover:to-red-800 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 transition-all active:scale-[0.98] uppercase tracking-wider"
-                  >
-                    Confirm Booking
-                  </button>
-                  <p className="text-center text-xs text-gray-500 mt-4 flex items-center justify-center gap-1 font-medium">
-                    <Info className="w-4 h-4 text-orange-400" /> No payment
-                    required at this step.
-                  </p>
-                </div>
-              </form>
-            </div>
-          </div>
-        )}
-
-        {/* VIEW: SUCCESS */}
-        {view === "success" && (
-          <div className="animate-in zoom-in-95 duration-500 max-w-md mx-auto mt-10">
-            <div className="bg-white rounded-3xl shadow-2xl border-2 border-green-500/20 overflow-hidden text-center p-8 sm:p-10 relative">
-              <div className="absolute top-0 left-0 w-full h-3 bg-gradient-to-r from-green-500 via-emerald-600 to-green-500"></div>
-
-              <div className="mx-auto flex items-center justify-center h-24 w-24 rounded-full bg-green-50 mb-6 border-4 border-green-100 shadow-inner">
-                <CheckCircle className="h-12 w-12 text-green-600" />
-              </div>
-
-              <h2 className="text-3xl font-serif font-bold text-[#8B0000] mb-3">
-                Booking Confirmed!
-              </h2>
-              <p className="text-orange-900 font-medium mb-8">
-                May Sri Abhaya Anjaneya Swamy's blessings be upon you and your
-                family, {formData.devoteeName}. 🙏
-              </p>
-
-              <div className="bg-gradient-to-br from-orange-50 to-amber-50 rounded-2xl p-6 mb-8 text-left border border-orange-200 shadow-sm relative overflow-hidden">
-                <div className="absolute right-0 bottom-0 opacity-[0.05] pointer-events-none">
-                  <Bell className="w-32 h-32 transform translate-x-8 translate-y-8" />
-                </div>
-                <div className="flex items-center justify-between mb-4 pb-4 border-b border-orange-200/60 relative z-10">
-                  <span className="text-orange-800/70 text-sm font-semibold uppercase tracking-wider">
-                    Pooja
-                  </span>
-                  <span className="font-bold text-[#8B0000] text-lg">
-                    Nitya Pooja
-                  </span>
-                </div>
-                <div className="flex items-center justify-between mb-4 pb-4 border-b border-orange-200/60 relative z-10">
-                  <span className="text-orange-800/70 text-sm font-semibold uppercase tracking-wider">
-                    Date
-                  </span>
-                  <span className="font-bold text-gray-900">
-                    {formatDate(selectedDate)}
-                  </span>
-                </div>
-                <div className="flex items-center justify-between mb-4 pb-4 border-b border-orange-200/60 relative z-10">
-                  <span className="text-orange-800/70 text-sm font-semibold uppercase tracking-wider">
-                    Recurrence
-                  </span>
-                  <span className="font-bold text-gray-900">
-                    {formData.recurrence === "Yearly"
-                      ? "Every Year"
-                      : "One Time"}
-                  </span>
-                </div>
-                <div className="flex items-center justify-between relative z-10">
-                  <span className="text-orange-800/70 text-sm font-semibold uppercase tracking-wider">
-                    Time
-                  </span>
-                  <span className="font-bold text-gray-900">07:00 AM</span>
-                </div>
-              </div>
-
-              <button
-                onClick={resetBooking}
-                className="w-full py-4 bg-gradient-to-r from-[#8B0000] to-red-700 text-yellow-50 font-bold rounded-xl hover:from-red-700 hover:to-red-800 transition-all shadow-lg shadow-red-900/20 active:scale-[0.98] focus:ring-4 focus:ring-red-200 outline-none uppercase tracking-wide text-sm"
-              >
-                Book Another Pooja
-              </button>
-            </div>
-          </div>
-        )}
-
-        {/* DATE DETAILS DIALOG */}
-        {isDialogOpen && selectedDate && (
-          <div className="fixed inset-0 bg-black/60 z-[100] flex items-center justify-center backdrop-blur-sm p-4">
-            <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden animate-in zoom-in-95 duration-200">
-              <div className="bg-gradient-to-r from-[#8B0000] to-red-700 p-4 flex justify-between items-center shadow-md relative z-10">
-                <h3 className="text-white font-serif font-bold text-lg flex items-center gap-2">
-                  <CalendarIcon className="w-5 h-5 text-yellow-300" />
-                  {formatDate(selectedDate)}
+            {searchQuery.length === 10 && (
+              <div className="mb-8 p-4 bg-orange-50 rounded-2xl border border-orange-100 animate-in fade-in slide-in-from-top-2">
+                <h3 className="text-xs font-bold text-red-800 uppercase tracking-wider mb-3">
+                  {t.searchResultTitle}
                 </h3>
-                <button
-                  onClick={() => setIsDialogOpen(false)}
-                  className="text-red-200 hover:text-white transition-colors bg-white/10 hover:bg-white/20 p-1.5 rounded-full"
-                >
-                  <X className="w-5 h-5" />
+                {filteredSearch.length > 0 ? (
+                  <div className="space-y-2">
+                    {filteredSearch.map((b, i) => (
+                      <div
+                        key={i}
+                        className="flex justify-between items-center bg-white p-3 rounded-xl border border-orange-100"
+                      >
+                        <span className="text-sm font-bold text-gray-900">
+                          {b.DevoteeName}
+                        </span>
+                        <span className="text-xs font-bold text-red-700 bg-red-50 px-2 py-1 rounded-lg">
+                          {formatDateLabel(b.Date)}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="text-xs text-gray-500 italic">
+                    {t.noBookingsFound}
+                  </p>
+                )}
+              </div>
+            )}
+
+            <h2 className="text-xl font-bold text-[#8B0000] text-center mb-6">
+              {t.selectDate}
+            </h2>
+            {generateRollingYear().map((m, i) => (
+              <MonthGrid key={i} year={m.year} month={m.month} />
+            ))}
+          </div>
+        )}
+
+        {view === "form" && (
+          <div className="bg-white rounded-lg shadow-sm border border-orange-100 overflow-hidden animate-in fade-in duration-500">
+            <div className="p-8 border-b border-orange-50 relative">
+              <div className="absolute top-4 right-8 text-gray-100 opacity-20">
+                <Flame size={80} fill="currentColor" />
+              </div>
+              <h2 className="text-3xl font-serif font-bold text-[#8B0000] mb-4">
+                {t.devoteeDetails}
+              </h2>
+              <div className="flex gap-4">
+                <div className="bg-orange-50 px-4 py-2 rounded-full border border-orange-100 flex items-center gap-2 text-sm font-bold text-orange-800">
+                  <CalendarIcon size={16} className="text-orange-400" />{" "}
+                  {formatDateLabel(selectedDate)}
+                </div>
+                <div className="bg-orange-50 px-4 py-2 rounded-full border border-orange-100 flex items-center gap-2 text-sm font-bold text-orange-800">
+                  <Clock size={16} className="text-orange-400" /> 08:00 AM
+                  (Nitya Pooja)
+                </div>
+              </div>
+            </div>
+
+            <form onSubmit={handleSubmit} className="p-8 space-y-8">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                <div className="space-y-2">
+                  <label className="text-sm font-bold text-gray-700">
+                    {t.devoteeName}
+                  </label>
+                  <input
+                    required
+                    className="w-full p-4 bg-gray-50 border border-gray-100 rounded-lg outline-none focus:bg-white focus:border-orange-300"
+                    placeholder="Enter devotee name"
+                    onChange={(e) =>
+                      setFormData({ ...formData, devoteeName: e.target.value })
+                    }
+                  />
+                </div>
+                <div className="space-y-2">
+                  <label className="text-sm font-bold text-gray-700">
+                    {t.familyName}
+                  </label>
+                  <input
+                    required
+                    className="w-full p-4 bg-gray-50 border border-gray-100 rounded-lg outline-none focus:bg-white focus:border-orange-300"
+                    placeholder="Enter family name"
+                    onChange={(e) =>
+                      setFormData({ ...formData, familyName: e.target.value })
+                    }
+                  />
+                </div>
+                <div className="space-y-2">
+                  <label className="text-sm font-bold text-gray-700">
+                    {t.fatherName}
+                  </label>
+                  <input
+                    className="w-full p-4 bg-gray-50 border border-gray-100 rounded-lg outline-none focus:bg-white focus:border-orange-300"
+                    placeholder="Enter father's name"
+                    onChange={(e) =>
+                      setFormData({ ...formData, fatherName: e.target.value })
+                    }
+                  />
+                </div>
+                <div className="space-y-2">
+                  <label className="text-sm font-bold text-gray-700">
+                    {t.mobile}
+                  </label>
+                  <input
+                    required
+                    type="tel"
+                    maxLength={10}
+                    pattern="[0-9]{10}"
+                    className="w-full p-4 bg-gray-50 border border-gray-100 rounded-lg outline-none focus:bg-white focus:border-orange-300"
+                    placeholder="Enter 10-digit mobile number"
+                    onChange={(e) =>
+                      setFormData({
+                        ...formData,
+                        mobile: e.target.value.replace(/[^0-9]/g, ""),
+                      })
+                    }
+                  />
+                </div>
+                <div className="space-y-2">
+                  <label className="text-sm font-bold text-gray-700">
+                    {t.gothram}
+                  </label>
+                  <input
+                    className="w-full p-4 bg-gray-50 border border-gray-100 rounded-lg outline-none focus:bg-white focus:border-orange-300"
+                    placeholder="e.g. Kashyapa"
+                    onChange={(e) =>
+                      setFormData({ ...formData, gothram: e.target.value })
+                    }
+                  />
+                </div>
+                <div className="space-y-2">
+                  <label className="text-sm font-bold text-gray-700">
+                    {t.occasion}
+                  </label>
+                  <input
+                    className="w-full p-4 bg-gray-50 border border-gray-100 rounded-lg outline-none focus:bg-white focus:border-orange-300"
+                    placeholder="e.g. Birthday, Anniversary"
+                    onChange={(e) =>
+                      setFormData({ ...formData, occasion: e.target.value })
+                    }
+                  />
+                </div>
+              </div>
+              <button
+                disabled={isSubmitting}
+                className="w-full py-5 bg-[#8B0000] text-white font-bold rounded-xl shadow-lg hover:bg-red-900 transition-all uppercase tracking-widest"
+              >
+                {isSubmitting ? t.saving : t.confirm}
+              </button>
+            </form>
+          </div>
+        )}
+
+        {view === "success" && (
+          <div className="max-w-md mx-auto text-center bg-white p-10 rounded-3xl shadow-2xl border-t-8 border-green-500 animate-in zoom-in-95">
+            <div className="w-24 h-24 bg-green-50 rounded-full flex items-center justify-center mx-auto mb-6 border-4 border-green-100">
+              <CheckCircle size={48} className="text-green-600" />
+            </div>
+            <h2 className="text-3xl font-bold text-[#8B0000] mb-2">
+              {t.success}
+            </h2>
+            <p className="text-sm text-gray-700 font-medium mb-8 italic">
+              {t.blessings}
+              {formData.devoteeName}. 🙏
+            </p>
+
+            {/* --- RECEIPT BOX --- */}
+            <div className="bg-[#FFFBF2] rounded-2xl p-6 mb-8 text-left border border-orange-100 shadow-sm">
+              <div className="flex justify-between items-center py-3 border-b border-orange-100">
+                <span className="text-[10px] font-bold text-orange-800 uppercase tracking-wider">
+                  {t.poojaLabel}
+                </span>
+                <span className="font-bold text-red-900">Nitya Pooja</span>
+              </div>
+              <div className="flex justify-between items-center py-5 border-b border-orange-100">
+                <span className="text-[10px] font-bold text-orange-800 uppercase tracking-wider">
+                  {t.dateLabel}
+                </span>
+                <span className="text-2xl font-bold text-gray-900">
+                  {formatDateLabel(selectedDate)}
+                </span>
+              </div>
+              <div className="flex justify-between items-center py-3">
+                <span className="text-[10px] font-bold text-orange-800 uppercase tracking-wider">
+                  {t.timeLabel}
+                </span>
+                <span className="font-bold text-gray-900">08:00 AM</span>
+              </div>
+            </div>
+
+            <button
+              onClick={() => {
+                setView("calendar");
+                setSearchQuery("");
+              }}
+              className="w-full py-4 bg-[#8B0000] text-white font-bold rounded-xl uppercase tracking-widest"
+            >
+              {t.back}
+            </button>
+          </div>
+        )}
+
+        {isDialogOpen && selectedDate && (
+          <div className="fixed inset-0 bg-black/60 z-[100] flex items-center justify-center p-4 backdrop-blur-sm">
+            <div className="bg-white rounded-2xl w-full max-w-md shadow-2xl overflow-hidden">
+              <div className="bg-red-800 p-4 text-white flex justify-between items-center">
+                <h3 className="font-bold">{formatDateLabel(selectedDate)}</h3>
+                <button onClick={() => setIsDialogOpen(false)}>
+                  <X />
                 </button>
               </div>
-
-              <div className="p-6 bg-[#FFF8E7]">
-                <h4 className="font-bold text-[#8B0000] mb-3 pb-2 border-b border-orange-200 flex items-center gap-2">
-                  <User className="w-4 h-4" /> Devotees Booked
+              <div className="p-6">
+                <h4 className="font-bold text-red-800 mb-4 border-b pb-2 flex items-center gap-2">
+                  <User size={16} /> {t.bookedDevotees}
                 </h4>
-
-                <div className="max-h-[40vh] overflow-y-auto mb-6 space-y-2 pr-1">
-                  {bookings[selectedDate] &&
-                  bookings[selectedDate].length > 0 ? (
-                    bookings[selectedDate].map((b, idx) => (
-                      <div
-                        key={idx}
-                        className="flex items-center justify-between text-sm bg-white p-3 rounded-xl border border-orange-100 shadow-sm"
-                      >
-                        <div>
-                          <span className="font-bold text-gray-900 block">
-                            {b.devoteeName}
-                          </span>
-                          <span className="text-gray-500 text-xs font-medium">
-                            {b.familyName} Family
-                          </span>
-                        </div>
-                        <CheckCircle className="w-5 h-5 text-green-500" />
-                      </div>
-                    ))
-                  ) : (
-                    <div className="text-center py-6 bg-white rounded-xl border border-dashed border-orange-200">
-                      <Info className="w-8 h-8 text-orange-300 mx-auto mb-2" />
-                      <p className="text-sm text-gray-500 font-medium">
-                        No bookings for this date yet.
-                      </p>
-                      <p className="text-xs text-gray-400 mt-1">
-                        Be the first to book a Nitya Pooja.
-                      </p>
+                <div className="max-h-60 overflow-y-auto space-y-2 mb-6">
+                  {(
+                    bookingsMap[selectedDate.split("-").slice(1).join("-")] ||
+                    []
+                  ).map((b: any, i: number) => (
+                    <div
+                      key={i}
+                      className="p-3 bg-orange-50 rounded-lg flex justify-between border border-orange-100"
+                    >
+                      <span className="font-bold text-gray-900">
+                        {b.devoteeName}
+                      </span>
+                      <span className="text-xs text-orange-700 font-medium italic">
+                        {b.familyName} Family
+                      </span>
                     </div>
+                  ))}
+                  {!(
+                    bookingsMap[selectedDate.split("-").slice(1).join("-")] ||
+                    []
+                  ).length && (
+                    <p className="text-gray-400 text-center py-4 text-sm italic">
+                      {t.noBookings}
+                    </p>
                   )}
                 </div>
-
                 <button
                   onClick={() => {
                     setIsDialogOpen(false);
                     setView("form");
                   }}
-                  className="w-full py-4 bg-gradient-to-r from-[#8B0000] to-red-600 text-white font-bold rounded-xl hover:from-red-700 hover:to-red-800 shadow-lg shadow-red-900/20 transition-all active:scale-[0.98] flex items-center justify-center gap-2 uppercase tracking-wide text-sm"
+                  className="w-full py-4 bg-red-700 text-white rounded-xl font-bold flex items-center justify-center gap-2 shadow-lg"
                 >
-                  <Flame className="w-5 h-5 text-yellow-300" />
-                  Book Nitya Pooja
+                  <Flame size={20} className="text-yellow-300" /> Book Nitya
+                  Pooja
                 </button>
               </div>
             </div>
