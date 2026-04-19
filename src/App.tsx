@@ -38,14 +38,14 @@ const translations: any = {
     success: "బుకింగ్ నిర్ధారించబడింది!",
     blessings:
       "శ్రీ అభయ ఆంజనేయ స్వామి ఆశీస్సులు మీ కుటుంబానికి ఎల్లప్పుడూ ఉండాలి, ",
-    feeNotice: "పూజ రుసుము ₹1,000/- ను కమిటీ సభ్యులకు మాత్రమే ఇవ్వగలరని వినయపూర్వకంగా మనవి.",
+    feeNotice:
+      "పూజ రుసుము ₹1,000/- ను కమిటీ సభ్యులకు మాత్రమే ఇవ్వగలరని వినయపూర్వకంగా మనవి.",
     back: "మరో పూజను బుక్ చేయండి",
     noBookings: "ఈ తేదీకి ఇంకా బుకింగ్‌లు లేవు.",
     bookedDevotees: "నిత్య పూజ కార్యక్రమానికి బుక్ చేసిన భక్తులు",
     poojaLabel: "పూజ",
     dateLabel: "తేదీ",
     timeLabel: "సమయం",
-    mobileAlert: "దయచేసి సరైన 10 అంకెల మొబైల్ నంబర్‌ను నమోదు చేయండి.",
     days: ["ఆది", "సోమ", "మంగళ", "బుధ", "గురు", "శుక్ర", "శని"],
     months: [
       "జనవరి",
@@ -74,6 +74,15 @@ const translations: any = {
     langToggle: "ENGLISH",
     viewDetails: "వివరాలు",
     backToList: "జాబితాకు తిరిగి వెళ్లండి",
+    // Error Messages
+    errName: "దయచేసి భక్తుని పేరు నమోదు చేయండి",
+    errFamily: "దయచేసి ఇంటి పేరు నమోదు చేయండి",
+    errMobile: "దయచేసి సరిగ్గా 10 అంకెల మొబైల్ నంబర్ నమోదు చేయండి",
+    // Success Page Text Keys
+    titleBookingConfirmed: "బుకింగ్ నిర్ధారించబడింది!",
+    textBlessings:
+      "శ్రీ అభయ ఆంజనేయ స్వామి ఆశీస్సులు మీ కుటుంబానికి ఎల్లప్పుడూ ఉండాలి, {Harshavardhan Reddy}. 🙏",
+    buttonBookAnother: "మరో పూజను బుక్ చేయండి",
   },
   en: {
     title: "SRI ABHAYA ANJANEYA SWAMY S. SADLAPALLI",
@@ -96,14 +105,14 @@ const translations: any = {
     success: "Booking Confirmed!",
     blessings:
       "May Sri Abhaya Anjaneya Swamy's blessings be upon you and your family, ",
-    feeNotice: "Kindly pay the pooja fee of ₹1,000/- only to the committee members.",
+    feeNotice:
+      "Kindly pay the pooja fee of ₹1,000/- only to the committee members.",
     back: "Book Another Pooja",
     noBookings: "No bookings for this date yet.",
     bookedDevotees: "Devotees Booked for Nitya Pooja",
     poojaLabel: "POOJA",
     dateLabel: "DATE",
     timeLabel: "TIME",
-    mobileAlert: "Please enter a valid 10-digit mobile number.",
     days: ["Su", "Mo", "Tu", "We", "Th", "Fr", "Sa"],
     months: [
       "January",
@@ -132,6 +141,15 @@ const translations: any = {
     langToggle: "తెలుగు",
     viewDetails: "Details",
     backToList: "Back to List",
+    // Error Messages
+    errName: "Please enter the devotee name",
+    errFamily: "Please enter the family name",
+    errMobile: "Please enter exactly 10 digits for mobile number",
+    // Success Page Text Keys
+    titleBookingConfirmed: "Booking Confirmed!",
+    textBlessings:
+      "May Sri Abhaya Anjaneya Swamy's blessings be upon you and your family, {Harshavardhan Reddy}. 🙏",
+    buttonBookAnother: "BOOK ANOTHER POOJA",
   },
 };
 
@@ -148,6 +166,9 @@ export default function App() {
   const [searchQuery, setSearchQuery] = useState("");
   const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
 
+  // State to hold validation errors
+  const [errors, setErrors] = useState<any>({});
+
   const [formData, setFormData] = useState({
     devoteeName: "",
     familyName: "",
@@ -159,6 +180,11 @@ export default function App() {
 
   const today = new Date();
   today.setHours(0, 0, 0, 0);
+
+  // --- Scroll to Top when View changes ---
+  useEffect(() => {
+    window.scrollTo(0, 0);
+  }, [view]);
 
   // FETCH DATA & NORMALIZE KEYS
   useEffect(() => {
@@ -227,10 +253,19 @@ export default function App() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (formData.mobile.length !== 10) {
-      alert(t.mobileAlert);
+
+    // Custom Validations
+    const newErrors: any = {};
+    if (!formData.devoteeName.trim()) newErrors.devoteeName = t.errName;
+    if (!formData.familyName.trim()) newErrors.familyName = t.errFamily;
+    if (formData.mobile.length !== 10) newErrors.mobile = t.errMobile;
+
+    if (Object.keys(newErrors).length > 0) {
+      setErrors(newErrors);
       return;
     }
+
+    setErrors({}); // Clear errors if all good
     if (!selectedDate) return;
     setIsSubmitting(true);
 
@@ -456,6 +491,7 @@ export default function App() {
             <form
               onSubmit={handleSubmit}
               className="p-6 sm:p-8 space-y-6 sm:space-y-8"
+              noValidate
             >
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6 sm:gap-8">
                 <div className="space-y-2">
@@ -463,26 +499,44 @@ export default function App() {
                     {t.devoteeName}
                   </label>
                   <input
-                    required
-                    className="w-full p-4 bg-gray-50 border border-gray-100 rounded-lg outline-none focus:bg-white focus:border-orange-300"
+                    className={`w-full p-4 bg-gray-50 border rounded-lg outline-none focus:bg-white focus:border-orange-300 transition-colors ${
+                      errors.devoteeName ? "border-red-500" : "border-gray-100"
+                    }`}
                     placeholder={t.phDevoteeName}
-                    onChange={(e) =>
-                      setFormData({ ...formData, devoteeName: e.target.value })
-                    }
+                    value={formData.devoteeName}
+                    onChange={(e) => {
+                      setFormData({ ...formData, devoteeName: e.target.value });
+                      if (errors.devoteeName)
+                        setErrors({ ...errors, devoteeName: null });
+                    }}
                   />
+                  {errors.devoteeName && (
+                    <p className="text-xs font-bold text-red-600 mt-1">
+                      {errors.devoteeName}
+                    </p>
+                  )}
                 </div>
                 <div className="space-y-2">
                   <label className="text-sm font-bold text-gray-700">
                     {t.familyName}
                   </label>
                   <input
-                    required
-                    className="w-full p-4 bg-gray-50 border border-gray-100 rounded-lg outline-none focus:bg-white focus:border-orange-300"
+                    className={`w-full p-4 bg-gray-50 border rounded-lg outline-none focus:bg-white focus:border-orange-300 transition-colors ${
+                      errors.familyName ? "border-red-500" : "border-gray-100"
+                    }`}
                     placeholder={t.phFamilyName}
-                    onChange={(e) =>
-                      setFormData({ ...formData, familyName: e.target.value })
-                    }
+                    value={formData.familyName}
+                    onChange={(e) => {
+                      setFormData({ ...formData, familyName: e.target.value });
+                      if (errors.familyName)
+                        setErrors({ ...errors, familyName: null });
+                    }}
                   />
+                  {errors.familyName && (
+                    <p className="text-xs font-bold text-red-600 mt-1">
+                      {errors.familyName}
+                    </p>
+                  )}
                 </div>
                 <div className="space-y-2">
                   <label className="text-sm font-bold text-gray-700">
@@ -491,6 +545,7 @@ export default function App() {
                   <input
                     className="w-full p-4 bg-gray-50 border border-gray-100 rounded-lg outline-none focus:bg-white focus:border-orange-300"
                     placeholder={t.phFatherName}
+                    value={formData.fatherName}
                     onChange={(e) =>
                       setFormData({ ...formData, fatherName: e.target.value })
                     }
@@ -504,6 +559,7 @@ export default function App() {
                   <input
                     className="w-full p-4 bg-gray-50 border border-gray-100 rounded-lg outline-none focus:bg-white focus:border-orange-300"
                     placeholder={t.phGothram}
+                    value={formData.gothram}
                     onChange={(e) =>
                       setFormData({ ...formData, gothram: e.target.value })
                     }
@@ -515,19 +571,26 @@ export default function App() {
                     {t.mobile}
                   </label>
                   <input
-                    required
                     type="tel"
                     maxLength={10}
-                    pattern="[0-9]{10}"
-                    className="w-full p-4 bg-gray-50 border border-gray-100 rounded-lg outline-none focus:bg-white focus:border-orange-300"
+                    className={`w-full p-4 bg-gray-50 border rounded-lg outline-none focus:bg-white focus:border-orange-300 transition-colors ${
+                      errors.mobile ? "border-red-500" : "border-gray-100"
+                    }`}
                     placeholder={t.phMobile}
-                    onChange={(e) =>
+                    value={formData.mobile}
+                    onChange={(e) => {
                       setFormData({
                         ...formData,
                         mobile: e.target.value.replace(/[^0-9]/g, ""),
-                      })
-                    }
+                      });
+                      if (errors.mobile) setErrors({ ...errors, mobile: null });
+                    }}
                   />
+                  {errors.mobile && (
+                    <p className="text-xs font-bold text-red-600 mt-1">
+                      {errors.mobile}
+                    </p>
+                  )}
                 </div>
 
                 <div className="space-y-2">
@@ -537,6 +600,7 @@ export default function App() {
                   <input
                     className="w-full p-4 bg-gray-50 border border-gray-100 rounded-lg outline-none focus:bg-white focus:border-orange-300"
                     placeholder={t.phOccasion}
+                    value={formData.occasion}
                     onChange={(e) =>
                       setFormData({ ...formData, occasion: e.target.value })
                     }
@@ -545,7 +609,7 @@ export default function App() {
               </div>
               <button
                 disabled={isSubmitting}
-                className="w-full py-5 bg-[#8B0000] text-white font-bold rounded-xl shadow-lg hover:bg-red-900 transition-all uppercase tracking-widest"
+                className="w-full mt-8 py-5 bg-[#8B0000] text-white font-bold rounded-xl shadow-lg hover:bg-red-900 transition-all uppercase tracking-widest"
               >
                 {isSubmitting ? t.saving : t.confirm}
               </button>
@@ -554,56 +618,99 @@ export default function App() {
         )}
 
         {view === "success" && (
-          <div className="max-w-md mx-auto text-center bg-white p-6 sm:p-10 rounded-3xl shadow-2xl border-t-8 border-green-500">
-            <div className="w-20 h-20 sm:w-24 sm:h-24 bg-green-50 rounded-full flex items-center justify-center mx-auto mb-6 border-4 border-green-100">
-              <CheckCircle size={48} className="text-green-600" />
-            </div>
-            <h2 className="text-2xl sm:text-3xl font-bold text-[#8B0000] mb-2">
-              {t.success}
-            </h2>
-            <p className="text-sm text-gray-700 font-medium mb-8 italic">
-              {t.blessings}
-              {formData.devoteeName}. 🙏
-            </p>
-            <div className="bg-[#FFFBF2] rounded-2xl p-6 mb-6 text-left border border-orange-100 shadow-sm">
-              <div className="flex justify-between items-center py-3 border-b border-orange-100">
-                <span className="text-[10px] font-bold text-orange-800 uppercase tracking-wider">
-                  {t.poojaLabel}
-                </span>
-                <span className="font-bold text-red-900">{t.nityaPooja}</span>
-              </div>
-              <div className="flex justify-between items-center py-5 border-b border-orange-100">
-                <span className="text-[10px] font-bold text-orange-800 uppercase tracking-wider">
-                  {t.dateLabel}
-                </span>
-                <span className="text-xl sm:text-2xl font-bold text-gray-900">
-                  {formatDateLabel(selectedDate)}
-                </span>
-              </div>
-              <div className="flex justify-between items-center py-3">
-                <span className="text-[10px] font-bold text-orange-800 uppercase tracking-wider">
-                  {t.timeLabel}
-                </span>
-                <span className="font-bold text-gray-900">{t.timeAm}</span>
-              </div>
-            </div>
-
-            {/* --- FEE NOTICE --- */}
-            <div className="bg-red-50 border border-red-100 rounded-xl p-4 mb-8 text-center shadow-sm">
-              <p className="text-xs sm:text-sm text-red-800 font-medium leading-relaxed">
-                {t.feeNotice}
-              </p>
-            </div>
-
-            <button
-              onClick={() => {
-                setView("calendar");
-                setSearchQuery("");
+          <div className="min-h-[85vh] flex items-center justify-center py-6 px-4">
+            <div
+              className="relative w-full max-w-[380px] mx-auto overflow-hidden rounded-[20px] sm:rounded-[30px] border-[12px] border-[#5C2B09] shadow-2xl flex flex-col pb-8"
+              style={{
+                background: "linear-gradient(to bottom, #FFFBF2, #F3E5AB)",
               }}
-              className="w-full py-4 bg-[#8B0000] text-white font-bold rounded-xl uppercase tracking-widest text-sm"
             >
-              {t.back}
-            </button>
+              <div className="absolute inset-1.5 border-[1.5px] border-[#D4AF37] pointer-events-none rounded-xl sm:rounded-[20px]"></div>
+
+              <div className="mx-auto w-16 h-16 mt-8 mb-3 rounded-full border-[3px] border-green-500 flex items-center justify-center bg-transparent z-10 relative">
+                <div className="absolute inset-0 bg-green-500/10 rounded-full blur-sm"></div>
+                <CheckCircle
+                  size={36}
+                  className="text-green-600"
+                  strokeWidth={2.5}
+                />
+              </div>
+
+              <h2 className="text-2xl sm:text-[26px] font-serif font-bold text-[#8B0000] mb-2 text-center z-10">
+                {t.titleBookingConfirmed}
+              </h2>
+
+              <div className="text-xs sm:text-sm text-gray-800 font-medium italic mb-6 px-8 text-center z-10 leading-relaxed">
+                <p>{t.blessings}</p>
+                <p className="font-bold text-[#8B0000] text-[13px] sm:text-base mt-1">
+                  {formData.devoteeName} 🙏
+                </p>
+              </div>
+
+              <div className="mx-5 mb-8 border-[1.5px] border-[#CDA434] border-dashed rounded-2xl p-5 relative bg-[#FFFDF7]/60 shadow-inner z-10">
+                <div className="absolute -top-1.5 -left-1.5 w-3 h-3 bg-[#CDA434] rounded-full border-2 border-[#FFFDF7]"></div>
+                <div className="absolute -top-1.5 -right-1.5 w-3 h-3 bg-[#CDA434] rounded-full border-2 border-[#FFFDF7]"></div>
+                <div className="absolute -bottom-1.5 -left-1.5 w-3 h-3 bg-[#CDA434] rounded-full border-2 border-[#FFFDF7]"></div>
+                <div className="absolute -bottom-1.5 -right-1.5 w-3 h-3 bg-[#CDA434] rounded-full border-2 border-[#FFFDF7]"></div>
+
+                <div className="flex justify-between items-center py-2.5 border-b border-[#D4AF37]/30">
+                  <span className="text-[10px] sm:text-xs font-bold text-[#8B0000] uppercase tracking-widest">
+                    {t.poojaLabel}
+                  </span>
+                  <span className="font-bold text-[#8B0000] text-xs sm:text-sm">
+                    {t.nityaPooja}
+                  </span>
+                </div>
+
+                <div className="flex justify-between items-center py-4 border-b border-[#D4AF37]/30">
+                  <div className="flex items-center gap-2">
+                    <CalendarIcon size={14} className="text-[#CDA434]" />
+                    <span className="text-[10px] sm:text-xs font-bold text-[#8B0000] uppercase tracking-widest">
+                      {t.dateLabel}
+                    </span>
+                  </div>
+                  <span className="text-lg sm:text-xl font-extrabold text-gray-900">
+                    {formatDateLabel(selectedDate)}
+                  </span>
+                </div>
+
+                <div className="flex justify-between items-center py-2.5 mb-3">
+                  <div className="flex items-center gap-2">
+                    <Clock size={14} className="text-[#CDA434]" />
+                    <span className="text-[10px] sm:text-xs font-bold text-[#8B0000] uppercase tracking-widest">
+                      {t.timeLabel}
+                    </span>
+                  </div>
+                  <span className="font-bold text-gray-900 text-xs sm:text-sm">
+                    {t.timeAm}
+                  </span>
+                </div>
+
+                <div className="bg-[#F8EBCD]/70 border border-[#D4AF37]/40 rounded-xl p-3 mt-1 text-center">
+                  <p className="text-[10px] sm:text-[11px] text-[#8B0000] font-semibold leading-relaxed">
+                    {t.feeNotice}
+                  </p>
+                </div>
+              </div>
+
+              <button
+                onClick={() => {
+                  setView("calendar");
+                  setSearchQuery("");
+                  setFormData({
+                    devoteeName: "",
+                    familyName: "",
+                    fatherName: "",
+                    mobile: "",
+                    gothram: "",
+                    occasion: "",
+                  });
+                }}
+                className="mx-auto block px-8 py-3.5 bg-gradient-to-b from-[#8B0000] to-[#5C0000] text-white font-bold rounded-full uppercase tracking-widest text-[10px] sm:text-xs shadow-[0_4px_10px_rgba(139,0,0,0.3)] border border-[#400000] hover:scale-105 active:scale-95 transition-all z-10"
+              >
+                {t.buttonBookAnother}
+              </button>
+            </div>
           </div>
         )}
 
@@ -625,12 +732,16 @@ export default function App() {
                 >
                   <X size={18} />
                 </button>
-                
+
                 <h2 className="text-[11px] min-[375px]:text-[12px] sm:text-sm md:text-base font-extrabold text-white mx-6 sm:mx-10 tracking-wide leading-snug">
                   <span className="block">{t.popupTitle1}</span>
-                  {t.popupTitle2 && <span className="block mt-0.5 text-[10px] sm:text-xs">{t.popupTitle2}</span>}
+                  {t.popupTitle2 && (
+                    <span className="block mt-0.5 text-[10px] sm:text-xs">
+                      {t.popupTitle2}
+                    </span>
+                  )}
                 </h2>
-                
+
                 <p className="text-yellow-300 font-bold mt-1 text-sm tracking-widest">
                   ({formatDateLabel(selectedDate)})
                 </p>
@@ -741,7 +852,7 @@ export default function App() {
                     setIsDialogOpen(false);
                     setView("form");
                   }}
-                  className="w-full py-4 mt-2 bg-red-700 text-white rounded-xl font-bold flex items-center justify-center gap-2 shadow-lg text-sm sm:text-base"
+                  className="w-full py-4 mt-2 bg-red-700 text-white rounded-xl font-bold flex items-center justify-center gap-2 shadow-lg text-sm sm:text-base active:scale-95 transition-transform"
                 >
                   <Flame size={20} className="text-yellow-300" />{" "}
                   {t.bookPoojaBtn}
