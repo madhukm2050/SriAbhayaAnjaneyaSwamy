@@ -38,8 +38,7 @@ const translations: any = {
     success: "బుకింగ్ నిర్ధారించబడింది!",
     blessings:
       "శ్రీ అభయ ఆంజనేయ స్వామి ఆశీస్సులు మీ కుటుంబానికి ఎల్లప్పుడూ ఉండాలి, ",
-    feeNotice:
-      "పూజ రుసుము ₹1,000/- ను కమిటీ సభ్యులకు మాత్రమే ఇవ్వగలరని వినయపూర్వకంగా మనవి.",
+    feeNotice: "పూజ రుసుము ₹1,000/- ను కమిటీ సభ్యులకు మాత్రమే ఇవ్వగలరని వినయపూర్వకంగా మనవి.",
     back: "మరో పూజను బుక్ చేయండి",
     noBookings: "ఈ తేదీకి ఇంకా బుకింగ్‌లు లేవు.",
     bookedDevotees: "నిత్య పూజ కార్యక్రమానికి బుక్ చేసిన భక్తులు",
@@ -97,8 +96,7 @@ const translations: any = {
     success: "Booking Confirmed!",
     blessings:
       "May Sri Abhaya Anjaneya Swamy's blessings be upon you and your family, ",
-    feeNotice:
-      "We humbly request you to hand over the pooja fee of ₹1,000/- only to the committee members.",
+    feeNotice: "Kindly pay the pooja fee of ₹1,000/- only to the committee members.",
     back: "Book Another Pooja",
     noBookings: "No bookings for this date yet.",
     bookedDevotees: "Devotees Booked for Nitya Pooja",
@@ -590,7 +588,7 @@ export default function App() {
               </div>
             </div>
 
-            {/* --- NEW FEE NOTICE ADDED HERE --- */}
+            {/* --- FEE NOTICE --- */}
             <div className="bg-red-50 border border-red-100 rounded-xl p-4 mb-8 text-center shadow-sm">
               <p className="text-xs sm:text-sm text-red-800 font-medium leading-relaxed">
                 {t.feeNotice}
@@ -627,16 +625,12 @@ export default function App() {
                 >
                   <X size={18} />
                 </button>
-
+                
                 <h2 className="text-[11px] min-[375px]:text-[12px] sm:text-sm md:text-base font-extrabold text-white mx-6 sm:mx-10 tracking-wide leading-snug">
                   <span className="block">{t.popupTitle1}</span>
-                  {t.popupTitle2 && (
-                    <span className="block mt-0.5 text-[10px] sm:text-xs">
-                      {t.popupTitle2}
-                    </span>
-                  )}
+                  {t.popupTitle2 && <span className="block mt-0.5 text-[10px] sm:text-xs">{t.popupTitle2}</span>}
                 </h2>
-
+                
                 <p className="text-yellow-300 font-bold mt-1 text-sm tracking-widest">
                   ({formatDateLabel(selectedDate)})
                 </p>
