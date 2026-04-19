@@ -9,17 +9,18 @@ import {
   Flame,
   X,
   Search,
+  ChevronRight,
 } from "lucide-react";
 
 // Replace this with your actual Web App URL from Google Apps Script
 const GOOGLE_SHEET_URL: string =
   "https://script.google.com/macros/s/AKfycbwTKGgh_07E2mkg58lztoPb3ibH4fgAq5Mmmf2ZuVDfLN1yxlAXPFjaZ0PgXGNha2vbhA/exec";
 
-// --- Translations ---
 const translations: any = {
   te: {
-    title: "శ్రీ అభయ ఆంజనేయ స్వామి",
-    location: "ఎస్. సడ్లపల్లి",
+    title: "శ్రీ అభయ ఆంజనేయ స్వామి ఎస్. సడ్లపల్లి",
+    popupTitle1: "శ్రీ అభయ ఆంజనేయ స్వామి, S సడ్లపల్లి",
+    popupTitle2: "",
     searchPlaceholder: "మొబైల్ నంబర్‌తో వెతకండి...",
     searchResultTitle: "మీ రాబోయే బుకింగ్‌లు:",
     noBookingsFound: "డేటా ఏదీ కనిపించలేదు.",
@@ -29,6 +30,7 @@ const translations: any = {
     familyName: "ఇంటి పేరు *",
     fatherName: "తండ్రి పేరు",
     mobile: "మొబైల్ నంబర్ *",
+    mobileLabel: "మొబైల్ నంబర్",
     gothram: "గోత్రం",
     occasion: "సందర్భం",
     confirm: "నిత్య పూజను నిర్ధారించండి",
@@ -36,9 +38,11 @@ const translations: any = {
     success: "బుకింగ్ నిర్ధారించబడింది!",
     blessings:
       "శ్రీ అభయ ఆంజనేయ స్వామి ఆశీస్సులు మీ కుటుంబానికి ఎల్లప్పుడూ ఉండాలి, ",
+    feeNotice:
+      "పూజ రుసుము ₹1,000/- ను కమిటీ సభ్యులకు మాత్రమే ఇవ్వగలరని వినయపూర్వకంగా మనవి.",
     back: "మరో పూజను బుక్ చేయండి",
     noBookings: "ఈ తేదీకి ఇంకా బుకింగ్‌లు లేవు.",
-    bookedDevotees: "బుక్ చేసుకున్న భక్తులు",
+    bookedDevotees: "నిత్య పూజ కార్యక్రమానికి బుక్ చేసిన భక్తులు",
     poojaLabel: "పూజ",
     dateLabel: "తేదీ",
     timeLabel: "సమయం",
@@ -58,7 +62,6 @@ const translations: any = {
       "నవంబర్",
       "డిసెంబర్",
     ],
-    // --- New Fully Translated Fields ---
     phDevoteeName: "భక్తుని పేరు నమోదు చేయండి",
     phFamilyName: "ఇంటి పేరు నమోదు చేయండి",
     phFatherName: "తండ్రి పేరు నమోదు చేయండి",
@@ -70,10 +73,13 @@ const translations: any = {
     familySuffix: "కుటుంబం",
     bookPoojaBtn: "నిత్య పూజను బుక్ చేయండి",
     langToggle: "ENGLISH",
+    viewDetails: "వివరాలు",
+    backToList: "జాబితాకు తిరిగి వెళ్లండి",
   },
   en: {
-    title: "SRI ABHAYA ANJANEYA SWAMY",
-    location: "S. SADLAPALLI",
+    title: "SRI ABHAYA ANJANEYA SWAMY S. SADLAPALLI",
+    popupTitle1: "SRI ABHAYA ANJANEYA SWAMY",
+    popupTitle2: "S. SADLAPALLI",
     searchPlaceholder: "Search by mobile number...",
     searchResultTitle: "Your Upcoming Bookings:",
     noBookingsFound: "No records found.",
@@ -83,6 +89,7 @@ const translations: any = {
     familyName: "Family Name *",
     fatherName: "Father Name",
     mobile: "Mobile Number *",
+    mobileLabel: "Mobile Number",
     gothram: "Gothram",
     occasion: "Occasion",
     confirm: "Confirm Nitya Pooja",
@@ -90,9 +97,11 @@ const translations: any = {
     success: "Booking Confirmed!",
     blessings:
       "May Sri Abhaya Anjaneya Swamy's blessings be upon you and your family, ",
+    feeNotice:
+      "We humbly request you to hand over the pooja fee of ₹1,000/- only to the committee members.",
     back: "Book Another Pooja",
     noBookings: "No bookings for this date yet.",
-    bookedDevotees: "Nitya Pooja Devotees",
+    bookedDevotees: "Devotees Booked for Nitya Pooja",
     poojaLabel: "POOJA",
     dateLabel: "DATE",
     timeLabel: "TIME",
@@ -112,7 +121,6 @@ const translations: any = {
       "November",
       "December",
     ],
-    // --- New Fields ---
     phDevoteeName: "Enter devotee name",
     phFamilyName: "Enter family name",
     phFatherName: "Enter father's name",
@@ -124,6 +132,8 @@ const translations: any = {
     familySuffix: "Family",
     bookPoojaBtn: "Book Nitya Pooja",
     langToggle: "తెలుగు",
+    viewDetails: "Details",
+    backToList: "Back to List",
   },
 };
 
@@ -134,6 +144,7 @@ export default function App() {
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
   const [view, setView] = useState<string>("calendar");
   const [isDialogOpen, setIsDialogOpen] = useState<boolean>(false);
+  const [selectedDevotee, setSelectedDevotee] = useState<any | null>(null);
   const [rawBookings, setRawBookings] = useState<any[]>([]);
   const [bookingsMap, setBookingsMap] = useState<any>({});
   const [searchQuery, setSearchQuery] = useState("");
@@ -151,33 +162,47 @@ export default function App() {
   const today = new Date();
   today.setHours(0, 0, 0, 0);
 
+  // FETCH DATA & NORMALIZE KEYS
   useEffect(() => {
     fetch(GOOGLE_SHEET_URL)
       .then((res) => res.json())
       .then((data) => {
-        setRawBookings(data);
+        const normalizedData = data.map((row: any) => {
+          const cleanRow: any = {};
+          for (let key in row) {
+            cleanRow[key.trim()] = row[key];
+          }
+          return cleanRow;
+        });
+
+        setRawBookings(normalizedData);
+
         const grouped: any = {};
-        data.forEach((row: any) => {
+        normalizedData.forEach((row: any) => {
           if (!row.Date) return;
           const monthDay = row.Date.split("-").slice(1).join("-");
           if (!grouped[monthDay]) grouped[monthDay] = [];
+
           grouped[monthDay].push({
-            devoteeName: row.DevoteeName,
-            familyName: row.FamilyName,
+            DevoteeName: row.DevoteeName || "N/A",
+            FamilyName: row.FamilyName || "N/A",
+            FatherName: row.FatherName || "N/A",
+            Mobile: row.Mobile || "N/A",
+            Gothram: row.Gothram || "N/A",
+            Occasion: row.Occasion || "N/A",
+            Date: row.Date,
           });
         });
         setBookingsMap(grouped);
       })
-      .catch((err) => console.error(err));
+      .catch((err) => console.error("Error fetching sheet data:", err));
   }, []);
 
   const formatDateLabel = (dateStr: string | null) => {
     if (!dateStr) return "";
     const [y, m, d] = dateStr.split("-");
     const monthIndex = parseInt(m) - 1;
-    return lang === "te"
-      ? `${parseInt(d)} ${translations.te.months[monthIndex]}`
-      : `${parseInt(d)} ${translations.en.months[monthIndex]}`;
+    return `${parseInt(d)} ${translations[lang].months[monthIndex]}`;
   };
 
   const generateRollingYear = () => {
@@ -214,8 +239,8 @@ export default function App() {
     const bookingData = {
       Date: selectedDate,
       DevoteeName: formData.devoteeName,
-      FatherName: formData.fatherName || "N/A",
       FamilyName: formData.familyName,
+      FatherName: formData.fatherName || "N/A",
       Mobile: formData.mobile,
       Gothram: formData.gothram || "N/A",
       Occasion: formData.occasion || "N/A",
@@ -230,17 +255,11 @@ export default function App() {
       const mDay = selectedDate.split("-").slice(1).join("-");
       setBookingsMap((prev: any) => ({
         ...prev,
-        [mDay]: [
-          ...(prev[mDay] || []),
-          {
-            devoteeName: formData.devoteeName,
-            familyName: formData.familyName,
-          },
-        ],
+        [mDay]: [...(prev[mDay] || []), bookingData],
       }));
       setView("success");
     } catch (error) {
-      alert("Error!");
+      alert("Error saving booking!");
     } finally {
       setIsSubmitting(false);
     }
@@ -255,12 +274,9 @@ export default function App() {
     const blanks = Array.from({ length: firstDay }, (_, i) => i);
 
     return (
-      <div className="mb-8 bg-white/90 p-6 rounded-2xl shadow-sm border border-orange-100">
+      <div className="mb-8 bg-white/90 p-4 sm:p-6 rounded-2xl shadow-sm border border-orange-100">
         <h3 className="text-xl font-bold text-[#8B0000] mb-4 text-center">
-          {lang === "te"
-            ? translations.te.months[month]
-            : translations.en.months[month]}{" "}
-          {year}
+          {translations[lang].months[month]} {year}
         </h3>
         <div className="grid grid-cols-7 gap-1 text-center mb-2">
           {t.days.map((d: string) => (
@@ -283,13 +299,11 @@ export default function App() {
             ).padStart(2, "0")}`;
             const cellDate = new Date(year, month, day);
             cellDate.setHours(0, 0, 0, 0);
-            const oneYearOut = new Date(today);
-            oneYearOut.setFullYear(today.getFullYear() + 1);
-
             const isPast = cellDate < today;
-            const isTooFar = cellDate > oneYearOut;
+            const isTooFar =
+              cellDate >
+              new Date(new Date().setFullYear(today.getFullYear() + 1));
             const hasBooking = (bookingsMap[mDay] || []).length > 0;
-            const isSelected = selectedDate === dateStr;
 
             return (
               <button
@@ -298,9 +312,14 @@ export default function App() {
                 onClick={() => {
                   setSelectedDate(dateStr);
                   setIsDialogOpen(true);
+                  setSelectedDevotee(null);
                 }}
                 className={`h-10 rounded-full text-sm font-bold transition-all
-                  ${isSelected ? "bg-red-600 text-white" : "text-gray-800"}
+                  ${
+                    selectedDate === dateStr
+                      ? "bg-red-600 text-white"
+                      : "text-gray-800"
+                  }
                   ${
                     isPast || isTooFar
                       ? "opacity-20 cursor-not-allowed"
@@ -326,26 +345,26 @@ export default function App() {
     <div className="min-h-screen bg-[#FFF8E7] pb-12 font-sans selection:bg-orange-200">
       <header className="bg-[#8B0000] text-white sticky top-0 z-50 border-b-4 border-yellow-500 shadow-xl">
         <div className="max-w-4xl mx-auto px-4 h-20 flex items-center justify-between">
-          <div className="w-10">
+          <div className="w-8 sm:w-10">
             {view !== "calendar" && (
-              <button onClick={() => setView("calendar")}>
+              <button onClick={() => setView("calendar")} className="p-1">
                 <ArrowLeft />
               </button>
             )}
           </div>
-          <div className="text-center flex flex-col items-center">
+          <div className="text-center flex flex-col items-center max-w-[65%] sm:max-w-full">
             <div className="flex gap-2 text-yellow-400 text-[10px] mb-1">
               <Bell size={10} />
               <span className="font-serif">ॐ</span>
               <Bell size={10} />
             </div>
-            <h1 className="text-lg font-serif font-extrabold tracking-widest">
+            <h1 className="text-sm sm:text-base md:text-lg font-serif font-extrabold tracking-widest leading-tight">
               {t.title}
             </h1>
           </div>
           <button
             onClick={() => setLang(lang === "te" ? "en" : "te")}
-            className="bg-white/10 px-3 py-1 rounded text-xs border border-white/20 uppercase font-bold"
+            className="bg-white/10 px-2 sm:px-3 py-1 rounded text-[10px] sm:text-xs border border-white/20 uppercase font-bold"
           >
             {t.langToggle}
           </button>
@@ -370,24 +389,32 @@ export default function App() {
             </div>
 
             {searchQuery.length === 10 && (
-              <div className="mb-8 p-4 bg-orange-50 rounded-2xl border border-orange-100 animate-in fade-in slide-in-from-top-2">
+              <div className="mb-8 p-4 bg-orange-50 rounded-2xl border border-orange-100">
                 <h3 className="text-xs font-bold text-red-800 uppercase tracking-wider mb-3">
                   {t.searchResultTitle}
                 </h3>
                 {filteredSearch.length > 0 ? (
                   <div className="space-y-2">
                     {filteredSearch.map((b, i) => (
-                      <div
+                      <button
                         key={i}
-                        className="flex justify-between items-center bg-white p-3 rounded-xl border border-orange-100"
+                        onClick={() => {
+                          setSelectedDate(b.Date);
+                          setSelectedDevotee(b);
+                          setIsDialogOpen(true);
+                        }}
+                        className="w-full flex justify-between items-center bg-white p-3 rounded-xl border border-orange-100 hover:border-red-300 transition-all text-left"
                       >
                         <span className="text-sm font-bold text-gray-900">
                           {b.DevoteeName}
                         </span>
-                        <span className="text-xs font-bold text-red-700 bg-red-50 px-2 py-1 rounded-lg">
-                          {formatDateLabel(b.Date)}
-                        </span>
-                      </div>
+                        <div className="flex items-center gap-2">
+                          <span className="text-xs font-bold text-red-700 bg-red-50 px-2 py-1 rounded-lg">
+                            {formatDateLabel(b.Date)}
+                          </span>
+                          <ChevronRight size={14} className="text-gray-400" />
+                        </div>
+                      </button>
                     ))}
                   </div>
                 ) : (
@@ -409,27 +436,30 @@ export default function App() {
 
         {view === "form" && (
           <div className="bg-white rounded-lg shadow-sm border border-orange-100 overflow-hidden animate-in fade-in duration-500">
-            <div className="p-8 border-b border-orange-50 relative">
+            <div className="p-6 sm:p-8 border-b border-orange-50 relative">
               <div className="absolute top-4 right-8 text-gray-100 opacity-20">
                 <Flame size={80} fill="currentColor" />
               </div>
-              <h2 className="text-3xl font-serif font-bold text-[#8B0000] mb-4">
+              <h2 className="text-2xl sm:text-3xl font-serif font-bold text-[#8B0000] mb-4">
                 {t.devoteeDetails}
               </h2>
-              <div className="flex gap-4">
-                <div className="bg-orange-50 px-4 py-2 rounded-full border border-orange-100 flex items-center gap-2 text-sm font-bold text-orange-800">
+              <div className="flex flex-wrap gap-2 sm:gap-4">
+                <div className="bg-orange-50 px-4 py-2 rounded-full border border-orange-100 flex items-center gap-2 text-xs sm:text-sm font-bold text-orange-800">
                   <CalendarIcon size={16} className="text-orange-400" />{" "}
                   {formatDateLabel(selectedDate)}
                 </div>
-                <div className="bg-orange-50 px-4 py-2 rounded-full border border-orange-100 flex items-center gap-2 text-sm font-bold text-orange-800">
+                <div className="bg-orange-50 px-4 py-2 rounded-full border border-orange-100 flex items-center gap-2 text-xs sm:text-sm font-bold text-orange-800">
                   <Clock size={16} className="text-orange-400" /> {t.timeAm} (
                   {t.nityaPooja})
                 </div>
               </div>
             </div>
 
-            <form onSubmit={handleSubmit} className="p-8 space-y-8">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+            <form
+              onSubmit={handleSubmit}
+              className="p-6 sm:p-8 space-y-6 sm:space-y-8"
+            >
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6 sm:gap-8">
                 <div className="space-y-2">
                   <label className="text-sm font-bold text-gray-700">
                     {t.devoteeName}
@@ -468,6 +498,20 @@ export default function App() {
                     }
                   />
                 </div>
+
+                <div className="space-y-2">
+                  <label className="text-sm font-bold text-gray-700">
+                    {t.gothram}
+                  </label>
+                  <input
+                    className="w-full p-4 bg-gray-50 border border-gray-100 rounded-lg outline-none focus:bg-white focus:border-orange-300"
+                    placeholder={t.phGothram}
+                    onChange={(e) =>
+                      setFormData({ ...formData, gothram: e.target.value })
+                    }
+                  />
+                </div>
+
                 <div className="space-y-2">
                   <label className="text-sm font-bold text-gray-700">
                     {t.mobile}
@@ -487,18 +531,7 @@ export default function App() {
                     }
                   />
                 </div>
-                <div className="space-y-2">
-                  <label className="text-sm font-bold text-gray-700">
-                    {t.gothram}
-                  </label>
-                  <input
-                    className="w-full p-4 bg-gray-50 border border-gray-100 rounded-lg outline-none focus:bg-white focus:border-orange-300"
-                    placeholder={t.phGothram}
-                    onChange={(e) =>
-                      setFormData({ ...formData, gothram: e.target.value })
-                    }
-                  />
-                </div>
+
                 <div className="space-y-2">
                   <label className="text-sm font-bold text-gray-700">
                     {t.occasion}
@@ -523,20 +556,18 @@ export default function App() {
         )}
 
         {view === "success" && (
-          <div className="max-w-md mx-auto text-center bg-white p-10 rounded-3xl shadow-2xl border-t-8 border-green-500 animate-in zoom-in-95">
-            <div className="w-24 h-24 bg-green-50 rounded-full flex items-center justify-center mx-auto mb-6 border-4 border-green-100">
+          <div className="max-w-md mx-auto text-center bg-white p-6 sm:p-10 rounded-3xl shadow-2xl border-t-8 border-green-500">
+            <div className="w-20 h-20 sm:w-24 sm:h-24 bg-green-50 rounded-full flex items-center justify-center mx-auto mb-6 border-4 border-green-100">
               <CheckCircle size={48} className="text-green-600" />
             </div>
-            <h2 className="text-3xl font-bold text-[#8B0000] mb-2">
+            <h2 className="text-2xl sm:text-3xl font-bold text-[#8B0000] mb-2">
               {t.success}
             </h2>
             <p className="text-sm text-gray-700 font-medium mb-8 italic">
               {t.blessings}
               {formData.devoteeName}. 🙏
             </p>
-
-            {/* --- RECEIPT BOX --- */}
-            <div className="bg-[#FFFBF2] rounded-2xl p-6 mb-8 text-left border border-orange-100 shadow-sm">
+            <div className="bg-[#FFFBF2] rounded-2xl p-6 mb-6 text-left border border-orange-100 shadow-sm">
               <div className="flex justify-between items-center py-3 border-b border-orange-100">
                 <span className="text-[10px] font-bold text-orange-800 uppercase tracking-wider">
                   {t.poojaLabel}
@@ -547,7 +578,7 @@ export default function App() {
                 <span className="text-[10px] font-bold text-orange-800 uppercase tracking-wider">
                   {t.dateLabel}
                 </span>
-                <span className="text-2xl font-bold text-gray-900">
+                <span className="text-xl sm:text-2xl font-bold text-gray-900">
                   {formatDateLabel(selectedDate)}
                 </span>
               </div>
@@ -559,12 +590,19 @@ export default function App() {
               </div>
             </div>
 
+            {/* --- NEW FEE NOTICE ADDED HERE --- */}
+            <div className="bg-red-50 border border-red-100 rounded-xl p-4 mb-8 text-center shadow-sm">
+              <p className="text-xs sm:text-sm text-red-800 font-medium leading-relaxed">
+                {t.feeNotice}
+              </p>
+            </div>
+
             <button
               onClick={() => {
                 setView("calendar");
                 setSearchQuery("");
               }}
-              className="w-full py-4 bg-[#8B0000] text-white font-bold rounded-xl uppercase tracking-widest"
+              className="w-full py-4 bg-[#8B0000] text-white font-bold rounded-xl uppercase tracking-widest text-sm"
             >
               {t.back}
             </button>
@@ -573,49 +611,143 @@ export default function App() {
 
         {isDialogOpen && selectedDate && (
           <div className="fixed inset-0 bg-black/60 z-[100] flex items-center justify-center p-4 backdrop-blur-sm">
-            <div className="bg-white rounded-2xl w-full max-w-md shadow-2xl overflow-hidden">
-              <div className="bg-red-800 p-4 text-white flex justify-between items-center">
-                <h3 className="font-bold">{formatDateLabel(selectedDate)}</h3>
-                <button onClick={() => setIsDialogOpen(false)}>
-                  <X />
+            <div className="bg-white rounded-2xl w-full max-w-md shadow-2xl overflow-hidden animate-in zoom-in-95 duration-200 relative">
+              <div className="bg-[#8B0000] pt-6 pb-4 px-6 text-center relative shadow-sm border-b-4 border-yellow-500">
+                {selectedDevotee && (
+                  <button
+                    onClick={() => setSelectedDevotee(null)}
+                    className="absolute top-4 left-4 p-2 text-white hover:bg-white/20 rounded-full transition-colors"
+                  >
+                    <ArrowLeft size={18} />
+                  </button>
+                )}
+                <button
+                  onClick={() => setIsDialogOpen(false)}
+                  className="absolute top-4 right-4 p-2 text-white hover:bg-white/20 rounded-full transition-colors"
+                >
+                  <X size={18} />
                 </button>
-              </div>
-              <div className="p-6">
-                <h4 className="font-bold text-red-800 mb-4 border-b pb-2 flex items-center gap-2">
-                  <User size={16} /> {t.bookedDevotees}
-                </h4>
-                <div className="max-h-60 overflow-y-auto space-y-2 mb-6">
-                  {(
-                    bookingsMap[selectedDate.split("-").slice(1).join("-")] ||
-                    []
-                  ).map((b: any, i: number) => (
-                    <div
-                      key={i}
-                      className="p-3 bg-orange-50 rounded-lg flex justify-between items-center border border-orange-100"
-                    >
-                      <span className="font-bold text-gray-900">
-                        {b.devoteeName}
-                      </span>
-                      <span className="text-xs text-orange-700 font-medium italic">
-                        {b.familyName} {t.familySuffix}
-                      </span>
-                    </div>
-                  ))}
-                  {!(
-                    bookingsMap[selectedDate.split("-").slice(1).join("-")] ||
-                    []
-                  ).length && (
-                    <p className="text-gray-400 text-center py-4 text-sm italic">
-                      {t.noBookings}
-                    </p>
+
+                <h2 className="text-[11px] min-[375px]:text-[12px] sm:text-sm md:text-base font-extrabold text-white mx-6 sm:mx-10 tracking-wide leading-snug">
+                  <span className="block">{t.popupTitle1}</span>
+                  {t.popupTitle2 && (
+                    <span className="block mt-0.5 text-[10px] sm:text-xs">
+                      {t.popupTitle2}
+                    </span>
                   )}
-                </div>
+                </h2>
+
+                <p className="text-yellow-300 font-bold mt-1 text-sm tracking-widest">
+                  ({formatDateLabel(selectedDate)})
+                </p>
+              </div>
+
+              <div className="p-6 pt-5">
+                {!selectedDevotee ? (
+                  <>
+                    <h4 className="font-bold text-red-800 mb-4 border-b border-orange-100 pb-2 flex items-center gap-1.5 text-[10.5px] min-[375px]:text-[12px] sm:text-sm whitespace-nowrap tracking-tight">
+                      <User size={14} className="shrink-0" /> {t.bookedDevotees}
+                    </h4>
+                    <div className="max-h-60 overflow-y-auto space-y-2 mb-6 pr-1">
+                      {(
+                        bookingsMap[
+                          selectedDate.split("-").slice(1).join("-")
+                        ] || []
+                      ).map((b: any, i: number) => (
+                        <button
+                          key={i}
+                          onClick={() => setSelectedDevotee(b)}
+                          className="w-full p-3 bg-orange-50 rounded-lg flex justify-between items-center border border-orange-100 hover:border-red-300 transition-all text-left"
+                        >
+                          <div>
+                            <span className="font-bold text-gray-900 block">
+                              {b.DevoteeName}
+                            </span>
+                            <span className="text-[10px] text-orange-700 font-medium italic">
+                              {b.FamilyName} {t.familySuffix}
+                            </span>
+                          </div>
+                          <ChevronRight size={16} className="text-orange-300" />
+                        </button>
+                      ))}
+                      {!(
+                        bookingsMap[
+                          selectedDate.split("-").slice(1).join("-")
+                        ] || []
+                      ).length && (
+                        <p className="text-gray-400 text-center py-4 text-sm italic">
+                          {t.noBookings}
+                        </p>
+                      )}
+                    </div>
+                  </>
+                ) : (
+                  <div className="animate-in slide-in-from-right-4 duration-300">
+                    <div className="bg-orange-50 p-4 rounded-xl border border-orange-200 space-y-3 mb-6">
+                      <div className="flex justify-between border-b border-orange-100 pb-2">
+                        <span className="text-[10px] font-bold text-orange-800 uppercase">
+                          {t.devoteeName.replace(" *", "")}
+                        </span>
+                        <span className="font-bold text-gray-900 text-right">
+                          {selectedDevotee.DevoteeName}
+                        </span>
+                      </div>
+                      <div className="flex justify-between border-b border-orange-100 pb-2">
+                        <span className="text-[10px] font-bold text-orange-800 uppercase">
+                          {t.fatherName}
+                        </span>
+                        <span className="font-medium text-gray-800 text-right">
+                          {selectedDevotee.FatherName}
+                        </span>
+                      </div>
+                      <div className="flex justify-between border-b border-orange-100 pb-2">
+                        <span className="text-[10px] font-bold text-orange-800 uppercase">
+                          {t.familyName.replace(" *", "")}
+                        </span>
+                        <span className="font-medium text-gray-800 text-right">
+                          {selectedDevotee.FamilyName}
+                        </span>
+                      </div>
+                      <div className="flex justify-between border-b border-orange-100 pb-2">
+                        <span className="text-[10px] font-bold text-orange-800 uppercase">
+                          {t.gothram}
+                        </span>
+                        <span className="font-medium text-gray-800 text-right">
+                          {selectedDevotee.Gothram}
+                        </span>
+                      </div>
+                      <div className="flex justify-between border-b border-orange-100 pb-2">
+                        <span className="text-[10px] font-bold text-orange-800 uppercase">
+                          {t.mobileLabel}
+                        </span>
+                        <span className="font-medium text-gray-800 text-right">
+                          {selectedDevotee.Mobile}
+                        </span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-[10px] font-bold text-orange-800 uppercase">
+                          {t.occasion}
+                        </span>
+                        <span className="font-medium text-gray-800 text-right">
+                          {selectedDevotee.Occasion}
+                        </span>
+                      </div>
+                    </div>
+                    <button
+                      onClick={() => setSelectedDevotee(null)}
+                      className="w-full py-2 text-red-700 text-sm font-bold flex items-center justify-center gap-1"
+                    >
+                      <ArrowLeft size={14} /> {t.backToList}
+                    </button>
+                  </div>
+                )}
+
                 <button
                   onClick={() => {
                     setIsDialogOpen(false);
                     setView("form");
                   }}
-                  className="w-full py-4 bg-red-700 text-white rounded-xl font-bold flex items-center justify-center gap-2 shadow-lg"
+                  className="w-full py-4 mt-2 bg-red-700 text-white rounded-xl font-bold flex items-center justify-center gap-2 shadow-lg text-sm sm:text-base"
                 >
                   <Flame size={20} className="text-yellow-300" />{" "}
                   {t.bookPoojaBtn}
