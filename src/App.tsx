@@ -28,7 +28,7 @@ const translations: any = {
     devoteeDetails: "భక్తుల వివరాలు",
     devoteeName: "భక్తుని పేరు *",
     familyName: "ఇంటి పేరు *",
-    fatherName: "తండ్రి పేరు",
+    fatherName: "తండ్రి/భర్త పేరు",
     mobile: "మొబైల్ నంబర్ *",
     mobileLabel: "మొబైల్ నంబర్",
     gothram: "గోత్రం",
@@ -63,7 +63,7 @@ const translations: any = {
     ],
     phDevoteeName: "భక్తుని పేరు నమోదు చేయండి",
     phFamilyName: "ఇంటి పేరు నమోదు చేయండి",
-    phFatherName: "తండ్రి పేరు నమోదు చేయండి",
+    phFatherName: "తండ్రి/భర్త పేరు నమోదు చేయండి",
     phMobile: "10-అంకెల మొబైల్ నంబర్ నమోదు చేయండి",
     phGothram: "ఉదా. కశ్యప",
     phOccasion: "ఉదా. పుట్టినరోజు, పెళ్లిరోజు",
@@ -95,7 +95,7 @@ const translations: any = {
     devoteeDetails: "Devotee Details",
     devoteeName: "Devotee Name *",
     familyName: "Family Name *",
-    fatherName: "Father Name",
+    fatherName: "Father/Husband Name",
     mobile: "Mobile Number *",
     mobileLabel: "Mobile Number",
     gothram: "Gothram",
@@ -130,7 +130,7 @@ const translations: any = {
     ],
     phDevoteeName: "Enter devotee name",
     phFamilyName: "Enter family name",
-    phFatherName: "Enter father's name",
+    phFatherName: "Enter father/husband's name",
     phMobile: "Enter 10-digit mobile number",
     phGothram: "e.g. Kashyapa",
     phOccasion: "e.g. Birthday, Anniversary",
@@ -267,6 +267,7 @@ export default function App() {
 
     setErrors({}); // Clear errors if all good
     if (!selectedDate) return;
+
     setIsSubmitting(true);
 
     const bookingData = {
@@ -285,11 +286,21 @@ export default function App() {
         mode: "no-cors",
         body: JSON.stringify(bookingData),
       });
+
       const mDay = selectedDate.split("-").slice(1).join("-");
-      setBookingsMap((prev: any) => ({
-        ...prev,
-        [mDay]: [...(prev[mDay] || []), bookingData],
-      }));
+
+      // OVERRIDE LOGIC: Remove the old booking with the same mobile number for this date, then add the new one.
+      setBookingsMap((prev: any) => {
+        const existingBookings = prev[mDay] || [];
+        const filteredBookings = existingBookings.filter(
+          (b: any) => b.Mobile.toString() !== formData.mobile
+        );
+        return {
+          ...prev,
+          [mDay]: [...filteredBookings, bookingData],
+        };
+      });
+
       setView("success");
     } catch (error) {
       alert("Error saving booking!");
@@ -607,6 +618,7 @@ export default function App() {
                   />
                 </div>
               </div>
+
               <button
                 disabled={isSubmitting}
                 className="w-full mt-8 py-5 bg-[#8B0000] text-white font-bold rounded-xl shadow-lg hover:bg-red-900 transition-all uppercase tracking-widest"
